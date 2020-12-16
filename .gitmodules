@@ -4,9 +4,6 @@
 [submodule "ext/VexRiscv"]
 	path = ext/VexRiscv
 	url = https://github.com/SpinalHDL/VexRiscv.git
-[submodule "ext/sd_device"]
-	path = ext/sd_device
-	url = https://github.com/SpinalHDL/sd_device.git
 [submodule "ext/FreeRTOS-mirror"]
 	path = ext/FreeRTOS-mirror
 	url = https://github.com/coldnew/FreeRTOS-mirror.git
