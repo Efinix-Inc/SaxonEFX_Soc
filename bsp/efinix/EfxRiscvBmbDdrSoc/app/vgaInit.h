@@ -24,7 +24,8 @@
 void vgaI2c();
 
 void vgaInit(){
-    bsp_putString("VGA init\n");
+    bsp_putString("HDMI init\n");
+    bsp_uDelay(10000);
 
     vgaI2c();
 
