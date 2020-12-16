@@ -15,9 +15,9 @@
 
 
 void bspMain() {
-    vgaInit();
 
 #ifndef SPINAL_SIM
+    vgaInit();
 	spiFlash_init(SPI, SPI_CS);
 	spiFlash_wake(SPI, SPI_CS);
 	spiFlash_f2m(SPI, SPI_CS, USER_SOFTWARE_FLASH, USER_SOFTWARE_MEMORY, USER_SOFTWARE_SIZE);

@@ -461,7 +461,7 @@ object EfxRiscvAxiDdrSocSystemSim {
       }
 
       fork{
-        val at = 3
+        val at = 0
         val duration = 5
         while(simTime() < at*1000000000l) {
           disableSimWave()
