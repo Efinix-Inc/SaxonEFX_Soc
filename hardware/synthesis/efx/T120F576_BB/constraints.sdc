@@ -1,6 +1,6 @@
 # PLL Constraints
 #################
-create_clock -period 20 io_systemClk
+create_clock -period 15 io_systemClk
 create_clock -period 10 io_memoryClk
 create_clock -period 100 jtag_inst1_TCK
 create_clock -period 6.6 -waveform {3.3 6.6} video_clk_148_90
@@ -16,8 +16,8 @@ set_max_delay 10.0 -from [get_clocks io_memoryClk] -to [get_clocks {io_systemClk
 set_max_delay 10.0 -from [get_clocks io_systemClk] -to [get_clocks {io_memoryClk}]
 set_max_delay 6.0 -from [get_clocks io_memoryClk] -to [get_clocks {video_clk_148}]
 set_max_delay 6.0 -from [get_clocks video_clk_148] -to [get_clocks {io_memoryClk}]
-set_max_delay 20.0 -from [get_clocks io_systemClk] -to [get_clocks {jtag_inst1_TCK}]
-set_max_delay 20.0 -from [get_clocks jtag_inst1_TCK] -to [get_clocks {io_systemClk}]
+set_max_delay 15.0 -from [get_clocks io_systemClk] -to [get_clocks {jtag_inst1_TCK}]
+set_max_delay 15.0 -from [get_clocks jtag_inst1_TCK] -to [get_clocks {io_systemClk}]
 
 set_false_path -setup -hold -from io_asyncReset
 set_false_path -setup -hold -from RubySoc_inst/io_memoryReset*
