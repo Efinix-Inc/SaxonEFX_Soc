@@ -239,6 +239,7 @@ class EfxRiscvAxiDdrSocSystemWithArgs(p : EfxRiscvBmbDdrSocParameter) extends Ef
   interconnect.setPipelining(fabric.invalidationMonitor.output)(cmdValid = true, cmdReady = true, rspValid = true)
   interconnect.setPipelining(bmbPeripheral.bmb)(cmdHalfRate = true, rspHalfRate = true)
   interconnect.setPipelining(ddr.bmb)(cmdValid = true, cmdReady = true, rspValid = true)
+  interconnect.setPipelining(axiA.bmb)(cmdValid = true, cmdReady = true, rspValid = true, rspReady = true)
   interconnect.setPipelining(fabric.iBus.bmb)(cmdValid = true)
   for(cpu <- cores) interconnect.setPipelining(cpu.iBus)(rspValid = true)
 }
