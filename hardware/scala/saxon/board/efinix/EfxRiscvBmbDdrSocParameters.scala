@@ -154,8 +154,8 @@ object EfxRiscvBmbDdrSocParameter{
               parity = UartParityType.NONE,
               stop = UartStopType.ONE
             ),
-            txFifoDepth = 16,
-            rxFifoDepth = 16
+            txFifoDepth = 128,
+            rxFifoDepth = 128
           )
         )
       } text(s"Add a new UART with the given name, address (relative to the apbBridge) and interrupt id,  Ex : --uart name=portName,address=0x123000,interruptId=2")
