@@ -38,9 +38,6 @@ module top_rubySoc (
 	input           video_clk_148_90,
     input           video_clk_148,
     input           video_clkx2,
-    output     	    	apb3LED,
-	output			memoryCheckerDone,
-	output 			memoryCheckerPass,
     
     // output          hdmi_clk_out,
     output          hdmi_de,
@@ -75,9 +72,9 @@ module top_rubySoc (
   	output              	system_i2c_1_io_scl_writeEnable,
   	output              	system_i2c_1_io_scl_write,
   	input               	system_i2c_1_io_scl_read,
-  	input      [4:0]   	system_gpio_0_io_read,
-  	output     [4:0]   	system_gpio_0_io_write,
-  	output     [4:0]   	system_gpio_0_io_writeEnable,
+  	input      [3:0]   	system_gpio_0_io_read,
+  	output     [3:0]   	system_gpio_0_io_write,
+  	output     [3:0]   	system_gpio_0_io_writeEnable,
   	output              	io_ddrA_arw_valid,
   	input               	io_ddrA_arw_ready,
   	output     [31:0]   	io_ddrA_arw_payload_addr,
@@ -116,7 +113,7 @@ module top_rubySoc (
   	output              	dma_wvalid,
   	input               	dma_wready,
   	output     [255:0]  	dma_wdata,
-  	output     [32:0]   	dma_wstrb,
+  	output     [31:0]   	dma_wstrb,
   	output              	dma_wlast,
   	input               	dma_bvalid,
   	output              	dma_bready,
@@ -709,7 +706,7 @@ assign hdmi_txd = yuv_data;
 
 
 
-//assign probes[0] = hdmi_clk_out;
+assign probes[0] = system_uart_0_io_txd;
 assign probes[1] = hdmi_vsync;
 assign probes[2] = hdmi_hsync;
 assign probes[3] = hdmi_de;
