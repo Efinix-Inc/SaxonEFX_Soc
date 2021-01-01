@@ -76,7 +76,7 @@ class EfxRiscvAxiDdrSocSystemWithArgs(p : EfxRiscvBmbDdrSocParameter) extends Ef
   for((cpu, coreId) <- cores.zipWithIndex) {
     cpu.config.load(VexRiscvSmpClusterGen.vexRiscvConfig( //TODO
       hartId = coreId,
-      ioRange = _ (31 downto 28) === 0xF,
+      ioRange =address => p.apbBridgeMapping.hit(address) || p.axiAMapping.hit(address), //_ (31 downto 28) === 0xF,
       resetVector = 0xF9000000L,
       iBusWidth = 64,
       dBusWidth = 64,
@@ -141,6 +141,7 @@ class EfxRiscvAxiDdrSocSystemWithArgs(p : EfxRiscvBmbDdrSocParameter) extends Ef
     g.setName(spec.name)
     g.parameter.load(spec.config)
     g.connectInterrupt(plic, spec.interruptId)
+    interconnect.setPipelining(g.ctrl)(cmdHalfRate = true)
     g
   }
 
@@ -421,13 +422,20 @@ object EfxRiscvAxiDdrSocSystemSim {
       fork {
         ddrCd.waitSampling(100)
         val ddrMemory = SparseMemory()
-        new Axi4WriteOnlySlaveAgent(dut.ddrSim.writeOnly, ddrCd)
+        val woa = new Axi4WriteOnlySlaveAgent(dut.ddrSim.writeOnly, ddrCd)
         new Axi4WriteOnlyMonitor(dut.ddrSim.writeOnly, ddrCd) {
           override def onWriteByte(address: BigInt, data: Byte): Unit = ddrMemory.write(address.toLong, data)
         }
-        new Axi4ReadOnlySlaveAgent(dut.ddrSim.readOnly, ddrCd) {
+        val roa = new Axi4ReadOnlySlaveAgent(dut.ddrSim.readOnly, ddrCd) {
           override def readByte(address: BigInt): Byte = ddrMemory.read(address.toLong)
         }
+
+        woa.bDriver.transactionDelay = () => 0
+        woa.awDriver.factor = 1.0f
+        woa.wDriver.factor = 1.0f
+
+        roa.arDriver.factor = 1.0f
+        roa.rDriver.transactionDelay = () => 0
 
         for (u <- dut.system.ddr.ddrLogic.userAdapters) {
           u.userAxi.ar.valid #= false
@@ -465,7 +473,7 @@ object EfxRiscvAxiDdrSocSystemSim {
 
       fork{
         val at = 0
-        val duration = 5
+        val duration = 1
         while(simTime() < at*1000000000l) {
           disableSimWave()
           sleep(100000 * 10000)
