@@ -45,7 +45,8 @@ case class TrionDdrGenerator(addressWidth : Int, dataWidth : Int, mapping: Addre
   val systemLogic = add task new ClockingArea(systemClockDomain){
     val bmbToAxiBridge = BmbToAxi4SharedBridge(
       bmbConfig = accessRequirements.toBmbParameter(),
-      pendingMax = 7
+      pendingMax = 63,
+      halfRateAw = false
     )
   }
 
@@ -110,7 +111,7 @@ case class TrionDdrGenerator(addressWidth : Int, dataWidth : Int, mapping: Addre
       )
 
       userCd {
-        bridge.io.input.aw << userAxi.aw.halfPipe()
+        bridge.io.input.aw << userAxi.aw.s2mPipe().m2sPipe()
         bridge.io.input.ar << userAxi.ar.halfPipe()
         bridge.io.input.w << userAxi.w.s2mPipe().m2sPipe()
         bridge.io.input.r.m2sPipe() >> userAxi.r
@@ -140,10 +141,10 @@ case class TrionDdrGenerator(addressWidth : Int, dataWidth : Int, mapping: Addre
     }
 
     val ddrA = Axi4Shared(ddrAConfig)
-    ddrA.arw << arbiter.io.output.arw.halfPipe()
+    ddrA.arw <-/< arbiter.io.output.arw
     ddrA.w << arbiter.io.output.w.stage()
     ddrA.r >> arbiter.io.output.r
-    ddrA.b.halfPipe() >> arbiter.io.output.b
+    ddrA.b >/-> arbiter.io.output.b
 
     //Bridge adding the AXI3 WID and completting pending write transactions durring memory reset
     val ddrAResetCd = ClockDomain(
@@ -207,11 +208,11 @@ case class TrionDdrGenerator(addressWidth : Int, dataWidth : Int, mapping: Addre
       val ddrA_wStreamPipelied = ddrA.w.translateWith(ddrA_wPayload).haltWhen(!widStream.valid).m2sPipe().s2mPipe().m2sPipe()
 
       //Pipelined connection to the DDR controller
-      ioArw.halfPipe() >> io.ddrA.arw
+      ioArw >/-> io.ddrA.arw
       ddrA_wStreamPipelied.translateWith(ddrA_wStreamPipelied.payload.w) >> io.ddrA.w
       ddrA_wStreamPipelied.id <> io.ddrA_w_payload_id
       ddrA.r <-< io.ddrA.r
-      ddrA.b << io.ddrA.b.halfPipe()
+      ddrA.b <-/< io.ddrA.b
 
       (List(io.ddrA.arw.valid) ++ io.ddrA.arw.payload.flatten).foreach(s => KeepAttribute(s.getDrivingReg))
       (List(ddrA.r.valid) ++ ddrA.r.payload.flatten).foreach(s => KeepAttribute(s.getDrivingReg))
