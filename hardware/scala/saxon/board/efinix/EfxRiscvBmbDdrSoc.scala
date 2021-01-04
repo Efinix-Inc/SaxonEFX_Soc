@@ -227,12 +227,21 @@ class EfxRiscvAxiDdrSocSystemWithArgs(p : EfxRiscvBmbDdrSocParameter) extends Ef
       )
 
       val axiA = master(Axi4(p.axiA))
-      axiA << bmbToAxiBridge.io.output.toAxi4()
+      val axiAAdapted = Axi4(p.axiA)
+      axiAAdapted << bmbToAxiBridge.io.output.toAxi4()
+      axiA.ar << axiAAdapted.ar
+      axiA.aw << axiAAdapted.aw
+      axiA.w << axiAAdapted.w
+      axiA.r >-> axiAAdapted.r
+      axiA.b >> axiAAdapted.b
+
       Axi4SpecRenamer(axiA.setName("axiA"))
 
       val interrupt = in Bool()
     }
   }
+
+  interconnect.masters(bridge.bmb).withPerSourceDecoder()
   // Add some interconnect pipelining to improve FMax
   for(cpu <- cores) interconnect.setPipelining(cpu.dBus)(cmdValid = true, invValid = true, ackValid = true, syncValid = true)
   interconnect.setPipelining(fabric.exclusiveMonitor.input)(cmdValid = true, cmdReady = true, rspValid = true)
@@ -389,7 +398,7 @@ object EfxRiscvAxiDdrSocSystemSim {
           }
         }
       })
-    }.doSimUntilVoid("test", 42){dut =>
+    }.doSimUntilVoid("test", 43){dut =>
       val systemClkPeriod = (1e12/dut.debugCd.inputClockDomain.frequency.getValue.toDouble).toLong
       val ddrClkPeriod = (1e12/100e6).toLong
       val jtagClkPeriod = systemClkPeriod*4
@@ -430,12 +439,12 @@ object EfxRiscvAxiDdrSocSystemSim {
           override def readByte(address: BigInt): Byte = ddrMemory.read(address.toLong)
         }
 
-        woa.bDriver.transactionDelay = () => 0
-        woa.awDriver.factor = 1.0f
-        woa.wDriver.factor = 1.0f
-
-        roa.arDriver.factor = 1.0f
-        roa.rDriver.transactionDelay = () => 0
+//        woa.bDriver.transactionDelay = () => 0
+//        woa.awDriver.factor = 1.0f
+//        woa.wDriver.factor = 1.0f
+//
+//        roa.arDriver.factor = 1.0f
+//        roa.rDriver.transactionDelay = () => 0
 
         for (u <- dut.system.ddr.ddrLogic.userAdapters) {
           u.userAxi.ar.valid #= false
@@ -458,13 +467,17 @@ object EfxRiscvAxiDdrSocSystemSim {
 
         val images = "../buildroot-build/images/"
 
-//        ddrMemory.loadBin(0x00001000, images + "fw_jump.bin")
-//        ddrMemory.loadBin(0x00100000, images + "u-boot.bin")
-//        ddrMemory.loadBin(0x00400000, images + "uImage")
-//        ddrMemory.loadBin(0x00FF0000, images + "linux.dtb")
-//        ddrMemory.loadBin(0x00FFFFC0, images + "rootfs.cpio.uboot")
+        ddrMemory.loadBin(0x00001000, images + "fw_jump.bin")
+        //ddrMemory.loadBin(0x00100000, images + "u-boot.bin")
+        ddrMemory.loadBin(0x00400000, images + "uImage")
+        ddrMemory.loadBin(0x00FF0000, images + "linux.dtb")
+        ddrMemory.loadBin(0x00FFFFC0, images + "rootfs.cpio.uboot")
 
-        ddrMemory.loadBin(0x00001000, "software/standalone/test/aes/build/aes.bin")
+        //Bypass uboot
+        ddrMemory.loadBin(0x00400000, images + "Image")
+        List(0x00000897, 0x01088893, 0x0008a883 , 0x000880e7, 0x00400000).zipWithIndex.foreach{case (v,i) => ddrMemory.write(0x00100000+i*4, v)}
+
+//        ddrMemory.loadBin(0x00001000, "software/standalone/test/aes/build/aes.bin")
 
 //        ddrMemory.loadBin(0x00001000, "software/standalone/timerAndGpioInterruptDemo/build/timerAndGpioInterruptDemo_spinal_sim.bin")
 //        ddrMemory.loadBin(0x00001000, "software/standalone/dhrystone/build/dhrystone.bin")
@@ -473,7 +486,7 @@ object EfxRiscvAxiDdrSocSystemSim {
 
       fork{
         val at = 0
-        val duration = 1
+        val duration = 0
         while(simTime() < at*1000000000l) {
           disableSimWave()
           sleep(100000 * 10000)
