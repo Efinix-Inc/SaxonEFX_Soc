@@ -206,7 +206,7 @@ object EfxRiscvBmbDdrSocParameter{
 
 
       opt[Map[String, String]]("gpio") unbounded() action { (v, c) =>
-        val interruptMapping = v("interrupts").split(";").map(s => (s.split("->")(0).toInt -> s.split("->")(1).toInt))
+        val interruptMapping = v("interrupts").split("[;/]").map(s => (s.split("->")(0).toInt -> s.split("->")(1).toInt))
         gpio += GpioSpec(
           address = Integer.decode(v("address")).toInt,
           name = v("name"),
@@ -216,7 +216,7 @@ object EfxRiscvBmbDdrSocParameter{
             interrupt = interruptMapping.map(_._1).toSeq
           )
         )
-      } text (s"Add a new GPIO ctrl with the given name, address (relative to the apbBridge), width and interrupt mapping (pin->interruptId) Ex : --gpio name=io_gpioA,address=0x000000,width=8,interrupts=0->12;2->13")
+      } text (s"Add a new GPIO ctrl with the given name, address (relative to the apbBridge), width and interrupt mapping (pin->interruptId) Ex : --gpio name=io_gpioA,address=0x000000,width=8,interrupts=0->12/2->13")
 
 
       opt[Map[String, String]]("ddrMaster") unbounded() action { (v, c) =>

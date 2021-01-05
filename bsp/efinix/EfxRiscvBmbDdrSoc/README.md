@@ -19,7 +19,7 @@ sbt "runMain saxon.board.efinix.EfxRiscvBmbDdrSoc \
   --apbSlave name=io_apbSlave_0,address=0x800000,size=4096  \
   --apbSlave name=io_dma_ctrl,address=0x804000,size=16384  \
   --ddrMaster name=io_ddrMasters_0,dataWidth=32  \
-  --gpio name=system_gpio_0_io,address=0x000000,width=16,interrupts=0->12;1->13  \
+  --gpio name=system_gpio_0_io,address=0x000000,width=16,interrupts=0->12/1->13  \
   --uart name=system_uart_0_io,address=0x10000,interruptId=1  \
   --uart name=system_uart_1_io,address=0x11000,interruptId=2  \
   --spi name=system_spi_0_io,address=0x14000,interruptId=4  \
@@ -115,11 +115,11 @@ It will take quite a while to build, good luck and have fun <3
 # Getting this repository
 mkdir T120F576_BB_linux
 cd T120F576_BB_linux
-git clone https://github.com/Dolu1990/SaxonEFX_Soc.git -b dev-0.2 --recursive SaxonSoc
+git clone https://github.com/Dolu1990/SaxonEFX_Soc.git -b dev-0.2 --recursive SaxonEFX_Soc
 
 # Sourcing the build script
-source SaxonSoc/bsp/efinix/EfxRiscvBmbDdrSoc/source.sh
 export SAXON_CPU_COUNT=4
+source SaxonEFX_Soc/bsp/efinix/EfxRiscvBmbDdrSoc/source.sh
 
 # Clone opensbi, u-boot, linux, buildroot, openocd
 saxon_clone
@@ -150,7 +150,7 @@ saxon_buildroot_load
 ## Loading the FPGA and booting linux with ramfs using openocd
 
 ```
-source SaxonSoc/bsp/efinix/EfxRiscvBmbDdrSoc/source.sh
+source SaxonEFX_Soc/bsp/efinix/EfxRiscvBmbDdrSoc/source.sh
 
 # Boot linux using a ram file system (no sdcard), look at the saxon_buildroot_load end message
 saxon_buildroot_load

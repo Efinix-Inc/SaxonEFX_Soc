@@ -35,7 +35,7 @@ saxon_netlist(){
   --apbSlave name=io_apbSlave_0,address=0x800000,size=4096  \
   --apbSlave name=io_dma_ctrl,address=0x804000,size=16384  \
   --ddrMaster name=io_ddrMasters_0,dataWidth=32  \
-  --gpio name=system_gpio_0_io,address=0x000000,width=16,interrupts=0->12;1->13  \
+  --gpio name=system_gpio_0_io,address=0x000000,width=16,interrupts=0->12/1->13  \
   --uart name=system_uart_0_io,address=0x10000,interruptId=1  \
   --uart name=system_uart_1_io,address=0x11000,interruptId=2  \
   --spi name=system_spi_0_io,address=0x14000,interruptId=4  \
