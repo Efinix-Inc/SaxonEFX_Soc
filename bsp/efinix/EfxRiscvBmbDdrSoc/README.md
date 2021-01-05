@@ -142,6 +142,7 @@ saxon_openocd
 ## Loading buildroot via jtag
 
 ```
+export SAXON_CPU_COUNT=4
 source SaxonSoc/bsp/efinix/EfxRiscvBmbDdrSoc/source.sh
 saxon_buildroot_load
 ```
@@ -163,4 +164,14 @@ saxon_serial
 
 ```
 load mmc 0:1 0x00400000 uImage;load mmc 0:1 0x00FF0000 dtb; load mmc 0:1 0x00FFFFC0 rootfs.cpio.uboot;bootm 0x00400000 0x00FFFFC0 0x00FF0000
+```
+
+## Run doom
+
+``````
+export DISPLAY=:0
+nice --10 chocolate-doom -nosound -4 > /dev/null &
+sleep 7
+WID=$(xdotool getwindowfocus)
+xdotool windowmove $WID 0 140
 ```
