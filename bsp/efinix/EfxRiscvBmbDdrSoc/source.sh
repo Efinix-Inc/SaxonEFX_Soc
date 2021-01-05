@@ -47,5 +47,5 @@ saxon_netlist(){
   --interrupt name=userInterruptA,id=25  \
   --ramHex software/standalone/bootloader/build/bootloader.hex  \
   --cpuCount=4  \
-  --customInstruction
+  --customInstruction"
 }
