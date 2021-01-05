@@ -406,124 +406,38 @@ memory_checker #(
 							
 );
 
-  wire             cpu0_customInstruction_cmd_valid;
-  wire             cpu0_customInstruction_cmd_ready;
-  wire    [9:0]    cpu0_customInstruction_function_id;
-  wire    [31:0]   cpu0_customInstruction_inputs_0;
-  wire    [31:0]   cpu0_customInstruction_inputs_1;
-  wire             cpu0_customInstruction_rsp_valid;
-  wire             cpu0_customInstruction_rsp_ready;
-  wire             cpu0_customInstruction_response_ok;
-  wire    [31:0]   cpu0_customInstruction_outputs_0;
+  `define CPU_COUNT 4
 
-  wire             cpu1_customInstruction_cmd_valid;
-  wire             cpu1_customInstruction_cmd_ready;
-  wire    [9:0]    cpu1_customInstruction_function_id;
-  wire    [31:0]   cpu1_customInstruction_inputs_0;
-  wire    [31:0]   cpu1_customInstruction_inputs_1;
-  wire             cpu1_customInstruction_rsp_valid;
-  wire             cpu1_customInstruction_rsp_ready;
-  wire             cpu1_customInstruction_response_ok;
-  wire    [31:0]   cpu1_customInstruction_outputs_0;
+  wire             cpu_customInstruction_cmd_valid [0:`CPU_COUNT-1];
+  wire             cpu_customInstruction_cmd_ready[0:`CPU_COUNT-1];
+  wire    [9:0]    cpu_customInstruction_function_id[0:`CPU_COUNT-1];
+  wire    [31:0]   cpu_customInstruction_inputs_0[0:`CPU_COUNT-1];
+  wire    [31:0]   cpu_customInstruction_inputs_1[0:`CPU_COUNT-1];
+  wire             cpu_customInstruction_rsp_valid[0:`CPU_COUNT-1];
+  wire             cpu_customInstruction_rsp_ready[0:`CPU_COUNT-1];
+  wire             cpu_customInstruction_response_ok[0:`CPU_COUNT-1];
+  wire    [31:0]   cpu_customInstruction_outputs_0[0:`CPU_COUNT-1];
 
 
-  wire             cpu2_customInstruction_cmd_valid;
-  wire             cpu2_customInstruction_cmd_ready;
-  wire    [9:0]    cpu2_customInstruction_function_id;
-  wire    [31:0]   cpu2_customInstruction_inputs_0;
-  wire    [31:0]   cpu2_customInstruction_inputs_1;
-  wire             cpu2_customInstruction_rsp_valid;
-  wire             cpu2_customInstruction_rsp_ready;
-  wire             cpu2_customInstruction_response_ok;
-  wire    [31:0]   cpu2_customInstruction_outputs_0;
+genvar i;
+generate
+    for (i=0; i<`CPU_COUNT; i=i+1) begin : aes_block // <-- example block name
+      aes_instruction aes_instruction_0 (
+       .clk(io_systemClk),
+       .reset(io_systemReset),
 
-
-  wire             cpu3_customInstruction_cmd_valid;
-  wire             cpu3_customInstruction_cmd_ready;
-  wire    [9:0]    cpu3_customInstruction_function_id;
-  wire    [31:0]   cpu3_customInstruction_inputs_0;
-  wire    [31:0]   cpu3_customInstruction_inputs_1;
-  wire             cpu3_customInstruction_rsp_valid;
-  wire             cpu3_customInstruction_rsp_ready;
-  wire             cpu3_customInstruction_response_ok;
-  wire    [31:0]   cpu3_customInstruction_outputs_0;
-
-  //assign cpu0_customInstruction_cmd_ready = 1'b0;
-  //assign cpu1_customInstruction_cmd_ready = 1'b0;
-  //assign cpu2_customInstruction_cmd_ready = 1'b0;
-  //assign cpu3_customInstruction_cmd_ready = 1'b0;
-  //assign cpu0_customInstruction_rsp_valid = 1'b0;
-  //assign cpu1_customInstruction_rsp_valid = 1'b0;
-  //assign cpu2_customInstruction_rsp_valid = 1'b0;
-  //assign cpu3_customInstruction_rsp_valid = 1'b0;
-
-  aes_instruction aes_instruction_0 (
-   .clk(io_systemClk),
-   .reset(io_systemReset),
-
-   .cmd_valid(cpu0_customInstruction_cmd_valid),
-   .cmd_ready(cpu0_customInstruction_cmd_ready),
-   .cmd_function_id(cpu0_customInstruction_function_id),
-   .cmd_inputs_0(cpu0_customInstruction_inputs_0),
-   .cmd_inputs_1(cpu0_customInstruction_inputs_1),
-
-   .rsp_valid(cpu0_customInstruction_rsp_valid),
-   .rsp_ready(cpu0_customInstruction_rsp_ready),
-   .rsp_response_ok(cpu0_customInstruction_response_ok),
-   .rsp_outputs_0(cpu0_customInstruction_outputs_0)
-  );
-
-
-  aes_instruction aes_instruction_1 (
-   .clk(io_systemClk),
-   .reset(io_systemReset),
-
-   .cmd_valid(cpu1_customInstruction_cmd_valid),
-   .cmd_ready(cpu1_customInstruction_cmd_ready),
-   .cmd_function_id(cpu1_customInstruction_function_id),
-   .cmd_inputs_0(cpu1_customInstruction_inputs_0),
-   .cmd_inputs_1(cpu1_customInstruction_inputs_1),
-
-   .rsp_valid(cpu1_customInstruction_rsp_valid),
-   .rsp_ready(cpu1_customInstruction_rsp_ready),
-   .rsp_response_ok(cpu1_customInstruction_response_ok),
-   .rsp_outputs_0(cpu1_customInstruction_outputs_0)
-  );
-
-
-  aes_instruction aes_instruction_2 (
-   .clk(io_systemClk),
-   .reset(io_systemReset),
-
-   .cmd_valid(cpu2_customInstruction_cmd_valid),
-   .cmd_ready(cpu2_customInstruction_cmd_ready),
-   .cmd_function_id(cpu2_customInstruction_function_id),
-   .cmd_inputs_0(cpu2_customInstruction_inputs_0),
-   .cmd_inputs_1(cpu2_customInstruction_inputs_1),
-
-   .rsp_valid(cpu2_customInstruction_rsp_valid),
-   .rsp_ready(cpu2_customInstruction_rsp_ready),
-   .rsp_response_ok(cpu2_customInstruction_response_ok),
-   .rsp_outputs_0(cpu2_customInstruction_outputs_0)
-  );
-
-
-  aes_instruction aes_instruction_3 (
-   .clk(io_systemClk),
-   .reset(io_systemReset),
-
-   .cmd_valid(cpu3_customInstruction_cmd_valid),
-   .cmd_ready(cpu3_customInstruction_cmd_ready),
-   .cmd_function_id(cpu3_customInstruction_function_id),
-   .cmd_inputs_0(cpu3_customInstruction_inputs_0),
-   .cmd_inputs_1(cpu3_customInstruction_inputs_1),
-
-   .rsp_valid(cpu3_customInstruction_rsp_valid),
-   .rsp_ready(cpu3_customInstruction_rsp_ready),
-   .rsp_response_ok(cpu3_customInstruction_response_ok),
-   .rsp_outputs_0(cpu3_customInstruction_outputs_0)
-  );
-
+       .cmd_valid(cpu_customInstruction_cmd_valid[i]),
+       .cmd_ready(cpu_customInstruction_cmd_ready[i]),
+       .cmd_function_id(cpu_customInstruction_function_id[i]),
+       .cmd_inputs_0(cpu_customInstruction_inputs_0[i]),
+       .cmd_inputs_1(cpu_customInstruction_inputs_1[i]),
+       .rsp_valid(cpu_customInstruction_rsp_valid[i]),
+       .rsp_ready(cpu_customInstruction_rsp_ready[i]),
+       .rsp_response_ok(cpu_customInstruction_response_ok[i]),
+       .rsp_outputs_0(cpu_customInstruction_outputs_0[i])
+      );
+end
+endgenerate
 
 
 reg video_reset_148_buf;
@@ -812,6 +726,18 @@ assign probes[7] = system_i2c_0_io_scl_write;
 //Marco Wu Added for Debug
 /////////////////////////////////////////////////////////////////////////////
 
+`define customInstructionConnect(id) \
+  .cpu``id``_customInstruction_cmd_valid   (cpu_customInstruction_cmd_valid[``id``]), \
+  .cpu``id``_customInstruction_cmd_ready   (cpu_customInstruction_cmd_ready[``id``]), \
+  .cpu``id``_customInstruction_function_id (cpu_customInstruction_function_id[``id``]), \
+  .cpu``id``_customInstruction_inputs_0    (cpu_customInstruction_inputs_0[``id``]), \
+  .cpu``id``_customInstruction_inputs_1    (cpu_customInstruction_inputs_1[``id``]), \
+  .cpu``id``_customInstruction_rsp_valid   (cpu_customInstruction_rsp_valid[``id``]), \
+  .cpu``id``_customInstruction_rsp_ready   (cpu_customInstruction_rsp_ready[``id``]), \
+  .cpu``id``_customInstruction_response_ok (cpu_customInstruction_response_ok[``id``]), \
+  .cpu``id``_customInstruction_outputs_0   (cpu_customInstruction_outputs_0[``id``])
+
+
 EfxRiscvBmbDdrSoc RubySoc_inst
 (
   .io_systemClk				(io_systemClk),
@@ -1016,45 +942,14 @@ EfxRiscvBmbDdrSoc RubySoc_inst
   .jtagCtrl_update			(jtag_inst1_UPDATE),
   .jtagCtrl_reset			(jtag_inst1_RESET),
 
-  .cpu0_customInstruction_cmd_valid   (cpu0_customInstruction_cmd_valid),
-  .cpu0_customInstruction_cmd_ready   (cpu0_customInstruction_cmd_ready),
-  .cpu0_customInstruction_function_id (cpu0_customInstruction_function_id),
-  .cpu0_customInstruction_inputs_0    (cpu0_customInstruction_inputs_0),
-  .cpu0_customInstruction_inputs_1    (cpu0_customInstruction_inputs_1),
-  .cpu0_customInstruction_rsp_valid   (cpu0_customInstruction_rsp_valid),
-  .cpu0_customInstruction_rsp_ready   (cpu0_customInstruction_rsp_ready),
-  .cpu0_customInstruction_response_ok (cpu0_customInstruction_response_ok),
-  .cpu0_customInstruction_outputs_0   (cpu0_customInstruction_outputs_0),
-
-  .cpu1_customInstruction_cmd_valid   (cpu1_customInstruction_cmd_valid),
-  .cpu1_customInstruction_cmd_ready   (cpu1_customInstruction_cmd_ready),
-  .cpu1_customInstruction_function_id (cpu1_customInstruction_function_id),
-  .cpu1_customInstruction_inputs_0    (cpu1_customInstruction_inputs_0),
-  .cpu1_customInstruction_inputs_1    (cpu1_customInstruction_inputs_1),
-  .cpu1_customInstruction_rsp_valid   (cpu1_customInstruction_rsp_valid),
-  .cpu1_customInstruction_rsp_ready   (cpu1_customInstruction_rsp_ready),
-  .cpu1_customInstruction_response_ok (cpu1_customInstruction_response_ok),
-  .cpu1_customInstruction_outputs_0   (cpu1_customInstruction_outputs_0),
-
-  .cpu2_customInstruction_cmd_valid   (cpu2_customInstruction_cmd_valid),
-  .cpu2_customInstruction_cmd_ready   (cpu2_customInstruction_cmd_ready),
-  .cpu2_customInstruction_function_id (cpu2_customInstruction_function_id),
-  .cpu2_customInstruction_inputs_0    (cpu2_customInstruction_inputs_0),
-  .cpu2_customInstruction_inputs_1    (cpu2_customInstruction_inputs_1),
-  .cpu2_customInstruction_rsp_valid   (cpu2_customInstruction_rsp_valid),
-  .cpu2_customInstruction_rsp_ready   (cpu2_customInstruction_rsp_ready),
-  .cpu2_customInstruction_response_ok (cpu2_customInstruction_response_ok),
-  .cpu2_customInstruction_outputs_0   (cpu2_customInstruction_outputs_0),
-
-  .cpu3_customInstruction_cmd_valid   (cpu3_customInstruction_cmd_valid),
-  .cpu3_customInstruction_cmd_ready   (cpu3_customInstruction_cmd_ready),
-  .cpu3_customInstruction_function_id (cpu3_customInstruction_function_id),
-  .cpu3_customInstruction_inputs_0    (cpu3_customInstruction_inputs_0),
-  .cpu3_customInstruction_inputs_1    (cpu3_customInstruction_inputs_1),
-  .cpu3_customInstruction_rsp_valid   (cpu3_customInstruction_rsp_valid),
-  .cpu3_customInstruction_rsp_ready   (cpu3_customInstruction_rsp_ready),
-  .cpu3_customInstruction_response_ok (cpu3_customInstruction_response_ok),
-  .cpu3_customInstruction_outputs_0   (cpu3_customInstruction_outputs_0)
+  `customInstructionConnect(0),
+  `customInstructionConnect(1),
+  `customInstructionConnect(2),
+  `customInstructionConnect(3)/*,
+  `customInstructionConnect(4),
+  `customInstructionConnect(5),
+  `customInstructionConnect(6),
+  `customInstructionConnect(7)*/
 );
 
 endmodule
