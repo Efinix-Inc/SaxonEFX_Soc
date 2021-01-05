@@ -127,8 +127,8 @@ saxon_clone
 # Build the FPGA bitstream
 saxon_standalone_compile bootloader
 saxon_netlist
-cp -f hardware/netlist/EfxRiscvBmbDdrSoc.v ardware/synthesis/efx/T120F576_BB/source
-cp -f hardware/netlist/EfxRiscvBmbDdrSoc.v*.bin ardware/synthesis/efx/T120F576_BB
+cp -f hardware/netlist/EfxRiscvBmbDdrSoc.v hardware/synthesis/efx/T120F576_BB/source
+cp -f hardware/netlist/EfxRiscvBmbDdrSoc.v*.bin hardware/synthesis/efx/T120F576_BB
 ! run the hardware/synthesis/efx/T120F576_BB project and programe the board !
 
 # Build the firmware
