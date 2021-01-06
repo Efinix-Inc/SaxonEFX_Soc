@@ -711,12 +711,9 @@ assign hdmi_de = yuv_de;
 assign hdmi_txd = yuv_data;
 
 
-
-
-
 assign probes[0] = system_uart_0_io_txd;
-assign probes[1] = hdmi_vsync;
-assign probes[2] = hdmi_hsync;
+assign probes[1] = system_spi_1_io_sclk;
+assign probes[2] = system_spi_1_io_ss;
 assign probes[3] = hdmi_de;
 assign probes[4] = dma_hdmi_0_tvalid;
 assign probes[5] = dma_hdmi_0_tready;
