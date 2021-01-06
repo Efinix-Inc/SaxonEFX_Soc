@@ -168,10 +168,37 @@ load mmc 0:1 0x00400000 uImage;load mmc 0:1 0x00FF0000 dtb; load mmc 0:1 0x00FFF
 
 ## Run doom
 
-``````
+```
 export DISPLAY=:0
 nice --10 chocolate-doom -nosound -4 > /dev/null &
 sleep 7
 WID=$(xdotool getwindowfocus)
 xdotool windowmove $WID 0 140
+```
+
+## Flash opensbi and uboot in the SPI flash
+
+```
+Terminal 1 => run openocd
+source SaxonEFX_Soc/bsp/efinix/EfxRiscvBmbDdrSoc/source.sh
+saxon_openocd_connect
+
+Terminal 2 => run telenet and flash
+telnet localhost 4444
+targets saxon.cpu0   
+halt
+flash write_image erase unlock PATH_TO_buildroot/build/images/fw_jump.bin  0xF00000
+flash write_image erase unlock PATH_TO_buildroot/build/images/u-boot.bin  0xF40000
+```
+
+## Flash the sdcard
+
+```
+sudo dd if=buildroot-build/images/sdcard.img of=/dev/sdX
+```
+
+## Boot from sdcard
+
+```
+load mmc 0:1 0x00400000 uImage;load mmc 0:1 0x00FF0000 linux.dtb;bootm 0x00400000 - 0x00FF0000
 ```
