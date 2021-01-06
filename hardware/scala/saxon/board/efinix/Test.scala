@@ -163,8 +163,7 @@ object EfxDebugSoc extends App{
     "EfxRiscvBmbDdrSoc.v_toplevel_system_ramA_logic_ram_symbol0.bin",
     "EfxRiscvBmbDdrSoc.v_toplevel_system_ramA_logic_ram_symbol1.bin",
     "EfxRiscvBmbDdrSoc.v_toplevel_system_ramA_logic_ram_symbol2.bin",
-    "EfxRiscvBmbDdrSoc.v_toplevel_system_ramA_logic_ram_symbol3.bin",
-    "EfxRiscvBmbDdrSoc.v_toplevel_system_cpu_logic_cpu_RegFilePlugin_regFile.bin"
+    "EfxRiscvBmbDdrSoc.v_toplevel_system_ramA_logic_ram_symbol3.bin"
   )
   for(bin <- binCp){
     FileUtils.copyFile(new java.io.File(s"hardware/netlist/$bin"), new java.io.File(rtlRoot + s"source/$bin"))
