@@ -143,7 +143,7 @@ saxon_openocd
 
 ```
 export SAXON_CPU_COUNT=4
-source SaxonSoc/bsp/efinix/EfxRiscvBmbDdrSoc/source.sh
+source SaxonEFX_Soc/bsp/efinix/EfxRiscvBmbDdrSoc/source.sh
 saxon_buildroot_load
 ```
 
