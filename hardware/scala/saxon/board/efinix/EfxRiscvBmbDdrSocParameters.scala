@@ -49,6 +49,11 @@ case class InterruptSpec( name : String,
                           id : Int)
 
 
+case class RmiiSpec (     name : String,
+                          address : BigInt,
+                          interruptId : Int)
+
+
 //Definition of the SoC parameters
 case class EfxRiscvBmbDdrSocParameter(systemFrequency : HertzNumber,
                                       onChipRamSize : BigInt,
@@ -57,6 +62,7 @@ case class EfxRiscvBmbDdrSocParameter(systemFrequency : HertzNumber,
                                       uart : Seq[UartSpec],
                                       spi : Seq[SpiSpec],
                                       i2c : Seq[I2cSpec],
+                                      rmii : Seq[RmiiSpec],
                                       interrupt : Seq[InterruptSpec] = Nil,
                                       ddrA  : Axi4Config,
                                       axiA  : Axi4Config,
@@ -96,6 +102,7 @@ object EfxRiscvBmbDdrSocParameter{
     val uart = ArrayBuffer[UartSpec]()
     val spi = ArrayBuffer[SpiSpec]()
     val i2c = ArrayBuffer[I2cSpec]()
+    val rmii = ArrayBuffer[RmiiSpec]()
     val interrupt = ArrayBuffer[InterruptSpec]()
 
     def decode(str : String) = if(str.contains("0x"))
@@ -204,6 +211,14 @@ object EfxRiscvBmbDdrSocParameter{
         )
       } text (s"Add a new I2C with the given name, address (relative to the apbBridge) and interrupt id,  Ex : --i2c name=portName,address=0x123000,interruptId=2")
 
+      opt[Map[String, String]]("rmii") unbounded() action { (v, c) =>
+        rmii += RmiiSpec(
+          address = Integer.decode(v("address")).toInt,
+          name = v("name"),
+          interruptId = Integer.decode(v("interruptId")).toInt
+        )
+      } text (s"Add a new RMII with the given name, address (relative to the apbBridge) and interrupt id,  Ex : --i2c name=portName,address=0x123000,interruptId=2")
+
 
       opt[Map[String, String]]("gpio") unbounded() action { (v, c) =>
         val interruptMapping = v("interrupts").split("[;/]").map(s => (s.split("->")(0).toInt -> s.split("->")(1).toInt))
@@ -251,6 +266,7 @@ object EfxRiscvBmbDdrSocParameter{
       uart = uart,
       spi = spi,
       i2c = i2c,
+      rmii = rmii,
       interrupt = interrupt,
       onChipRamHexFile = onChipRamHexFile,
       cpuCount = cpuCount
@@ -283,6 +299,7 @@ object EfxRiscvBmbDdrSocParameter{
       uart = Nil,
       spi = Nil,
       i2c = Nil,
+      rmii = Nil,
       apbSlaves = Nil,
       ddrMasters = Nil,
       axiA = Axi4Config(

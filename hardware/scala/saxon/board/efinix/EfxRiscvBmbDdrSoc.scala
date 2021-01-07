@@ -11,6 +11,7 @@ import spinal.lib.bus.amba4.axi.sim.{Axi4ReadOnlySlaveAgent, Axi4WriteOnlyMonito
 import spinal.lib.bus.amba4.axi.{Axi4, Axi4Config, Axi4SpecRenamer}
 import spinal.lib.bus.bmb._
 import spinal.lib.bus.misc.SizeMapping
+import spinal.lib.com.eth.{MacEthParameter, PhyParameter}
 import spinal.lib.com.jtag.{Jtag, JtagTap, JtagTapInstructionCtrl}
 import spinal.lib.com.jtag.sim.JtagTcp
 import spinal.lib.com.spi.SpiHalfDuplexMaster
@@ -153,6 +154,31 @@ class EfxRiscvAxiDdrSocSystemWithArgs(p : EfxRiscvBmbDdrSocParameter) extends Ef
     g.i2c.setName(spec.name)
     g
   }
+
+  val rmii = for((spec, i) <- p.rmii.zipWithIndex) yield {
+    val mac = BmbMacEthGenerator(spec.address)
+    mac.connectInterrupt(plic, spec.interruptId)
+    val eth = mac.withPhyRmii(
+      withEr = false
+    )
+    eth.setName(spec.name)
+
+    mac.parameter load MacEthParameter(
+      phy = PhyParameter(
+        txDataWidth = 2,
+        rxDataWidth = 2
+      ),
+      rxDataWidth = 32,
+      rxBufferByteSize = 4096,
+      txDataWidth = 32,
+      txBufferByteSize = 4096
+    )
+
+    val rmii_clk = in.Bool().setName(spec.name + "_clk")
+    mac.txCd.load(ClockDomain(rmii_clk))
+    mac.rxCd.load(ClockDomain(rmii_clk))
+  }
+
 
   val gpio = for((spec, i) <- p.gpio.zipWithIndex) yield {
     val g = BmbGpioGenerator(spec.address)
