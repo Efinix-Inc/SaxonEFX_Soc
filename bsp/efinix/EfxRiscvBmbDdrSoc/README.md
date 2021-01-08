@@ -204,8 +204,8 @@ Terminal 2 => run telenet and flash
 telnet localhost 4444
 targets saxon.cpu0   
 halt
-flash write_image erase unlock PATH_TO_buildroot/build/images/fw_jump.bin  0xF00000
-flash write_image erase unlock PATH_TO_buildroot/build/images/u-boot.bin  0xF40000
+flash write_image erase unlock ABS_PATH_TO_buildroot-build/images/fw_jump.bin  0xF00000
+flash write_image erase unlock ABS_PATH_TO_buildroot-build/images/u-boot.bin  0xF40000
 ```
 
 ## Flash the sdcard
