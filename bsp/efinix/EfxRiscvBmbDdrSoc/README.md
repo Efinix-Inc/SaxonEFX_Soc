@@ -187,6 +187,12 @@ WID=$(xwininfo -tree -root | grep  xterm | awk '{print $1;}')
 xdotool windowmove $WID 0 400
 ```
 
+## Test AES acceleration
+
+```
+nice --20 openssl speed -elapsed -evp aes-128-cbc aes-256-cbc
+```
+
 ## Flash opensbi and uboot in the SPI flash
 
 ```
