@@ -181,7 +181,7 @@ xdotool windowmove $WID 0 140
 ```
 export DISPLAY=:0
 date +%T -s "10:13:13" # Need to set a date for htop to run
-xterm htop &
+xterm -fg white -bg black htop &
 sleep 5 # Wait long enough for doom to boot
 WID=$(xwininfo -tree -root | grep  xterm | awk '{print $1;}')
 xdotool windowmove $WID 0 400
