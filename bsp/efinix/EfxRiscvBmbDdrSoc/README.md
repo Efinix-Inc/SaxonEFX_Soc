@@ -166,14 +166,23 @@ saxon_serial
 load mmc 0:1 0x00400000 uImage;load mmc 0:1 0x00FF0000 dtb; load mmc 0:1 0x00FFFFC0 rootfs.cpio.uboot;bootm 0x00400000 0x00FFFFC0 0x00FF0000
 ```
 
-## Run doom
+## Run doom (on the board)
 
 ```
 export DISPLAY=:0
 nice --10 chocolate-doom -nosound -4 > /dev/null &
-sleep 7
+sleep 15 # Wait long enough for doom to boot
 WID=$(xdotool getwindowfocus)
 xdotool windowmove $WID 0 140
+```
+
+## Run xterm htop (on the board)
+
+```
+export DISPLAY=:0
+xterm htop &
+WID=$(xwininfo -tree -root | grep  xterm | awk '{print $1;}')
+xdotool windowmove $WID 0 400
 ```
 
 ## Flash opensbi and uboot in the SPI flash
@@ -202,3 +211,4 @@ sudo dd if=buildroot-build/images/sdcard.img of=/dev/sdX
 ```
 load mmc 0:1 0x00400000 uImage;load mmc 0:1 0x00FF0000 linux.dtb;bootm 0x00400000 - 0x00FF0000
 ```
+
