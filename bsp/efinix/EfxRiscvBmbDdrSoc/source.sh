@@ -46,6 +46,6 @@ saxon_netlist(){
   --i2c name=system_i2c_2_io,address=0x1A000,interruptId=10  \
   --interrupt name=userInterruptA,id=25  \
   --ramHex software/standalone/bootloader/build/bootloader.hex  \
-  --cpuCount=4  \
+  --cpuCount=$SAXON_CPU_COUNT  \
   --customInstruction"
 }
