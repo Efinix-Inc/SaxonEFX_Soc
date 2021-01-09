@@ -278,6 +278,11 @@ class EfxRiscvAxiDdrSocSystemWithArgs(p : EfxRiscvBmbDdrSocParameter) extends Ef
   interconnect.setPipelining(axiA.bmb)(cmdValid = true, cmdReady = true, rspValid = true, rspReady = true)
   interconnect.setPipelining(fabric.iBus.bmb)(cmdValid = true)
   for(cpu <- cores) interconnect.setPipelining(cpu.iBus)(rspValid = true)
+
+  def pipelinedCd() = this.generatorClockDomain.derivate(cd => cd.copy(reset = cd(KeepAttribute(RegNext(cd.readResetWire)))))
+  for(cpu <- cores) cpu.onClockDomain(pipelinedCd())
+  ddr.onClockDomain(pipelinedCd())
+  i2c.foreach(_.onClockDomain(pipelinedCd()))
 }
 
 class EfxRiscvBmbDdrSoc(p : EfxRiscvBmbDdrSocParameter) extends Generator{
@@ -306,8 +311,8 @@ class EfxRiscvBmbDdrSoc(p : EfxRiscvBmbDdrSocParameter) extends Generator{
   system.ddr.memoryClockDomain.merge(ddrCd.outputClockDomain)
   system.ddr.systemClockDomain.merge(systemCd.outputClockDomain)
 
-  val io_systemReset = systemCd.outputClockDomain.produce(out(CombInit(systemCd.outputClockDomain.reset)))
-  val io_memoryReset = ddrCd.outputClockDomain.produce(out(CombInit(ddrCd.outputClockDomain.reset)))
+  val io_systemReset = systemCd.outputClockDomain.produce(out(systemCd.outputClockDomain.on(RegNext(systemCd.outputClockDomain.reset))))
+  val io_memoryReset = ddrCd.outputClockDomain.produce(out(ddrCd.outputClockDomain.on(RegNext(ddrCd.outputClockDomain.reset))))
 }
 
 
