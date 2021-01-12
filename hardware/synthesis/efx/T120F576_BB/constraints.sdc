@@ -9,17 +9,18 @@ create_clock -period 25.0 jtag_inst1_TCK
 
 # False Path
 #################
-set_clock_groups -exclusive -group {io_memoryClk} -group {video_clk_148}
-set_clock_groups -exclusive -group {io_memoryClk} -group {io_systemClk}
-set_clock_groups -exclusive -group {io_systemClk} -group {jtag_inst1_TCK}
-
-set_max_delay 10.0 -from [get_clocks io_memoryClk] -to [get_clocks {io_systemClk}]
-set_max_delay 10.0 -from [get_clocks io_systemClk] -to [get_clocks {io_memoryClk}]
-set_max_delay 6.0 -from [get_clocks io_memoryClk] -to [get_clocks {video_clk_148}]
-set_max_delay 6.0 -from [get_clocks video_clk_148] -to [get_clocks {io_memoryClk}]
-set_max_delay 15.0 -from [get_clocks io_systemClk] -to [get_clocks {jtag_inst1_TCK}]
-set_max_delay 15.0 -from [get_clocks jtag_inst1_TCK] -to [get_clocks {io_systemClk}]
-set_max_delay 6.0 -from [get_clocks io_systemClk] -to [get_clocks {video_clk_148}]
+set_clock_groups -exclusive -group {io_systemClk io_memoryClk} -group {video_clk_148}
+#set_clock_groups -exclusive -group {io_memoryClk} -group {video_clk_148}
+##set_clock_groups -exclusive -group {io_memoryClk} -group {io_systemClk}
+#set_clock_groups -exclusive -group {io_systemClk} -group {jtag_inst1_TCK}
+#
+#set_max_delay 2.000 -from [get_clocks io_memoryClk] -to [get_clocks {io_systemClk}]
+#set_max_delay 2.000 -from [get_clocks io_systemClk] -to [get_clocks {io_memoryClk}]
+#set_max_delay 6.0 -from [get_clocks io_memoryClk] -to [get_clocks {video_clk_148}]
+#set_max_delay 6.0 -from [get_clocks video_clk_148] -to [get_clocks {io_memoryClk}]
+#set_max_delay 15.0 -from [get_clocks io_systemClk] -to [get_clocks {jtag_inst1_TCK}]
+#set_max_delay 15.0 -from [get_clocks jtag_inst1_TCK] -to [get_clocks {io_systemClk}]
+#set_max_delay 6.0 -from [get_clocks io_systemClk] -to [get_clocks {video_clk_148}]
 
 #set_false_path -setup -hold -from io_asyncReset
 #set_false_path -setup -hold -from RubySoc_inst/io_memoryReset*

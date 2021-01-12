@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<efx:project name="soc_rubySoc" description="" last_change_date="Sat January 9 2021 15:58:39" location="/media/data/open/SaxonSoc/efinix/SaxonEFX_Soc/hardware/synthesis/efx/T120F576_BB" sw_version="2020.1.140" last_run_state="pass" last_run_tool="efx_pgm" last_run_flow="bitstream" config_result_in_sync="true" design_ood="sync" place_ood="sync" route_ood="sync" xmlns:efx="http://www.efinixinc.com/enf_proj" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.efinixinc.com/enf_proj enf_proj.xsd">
+<efx:project name="soc_rubySoc" description="" last_change_date="Tue January 12 2021 12:54:19" location="/media/data/open/SaxonSoc/efinix/SaxonEFX_Soc/hardware/synthesis/efx/T120F576_BB" sw_version="2020.2.299.2.6" last_run_state="pass" last_run_tool="efx_pgm" last_run_flow="bitstream" config_result_in_sync="true" design_ood="sync" place_ood="sync" route_ood="sync" xmlns:efx="http://www.efinixinc.com/enf_proj" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.efinixinc.com/enf_proj enf_proj.xsd">
     <efx:device_info>
         <efx:family name="Trion"/>
         <efx:device name="T120F576"/>
@@ -7,17 +7,17 @@
     </efx:device_info>
     <efx:design_info def_veri_version="verilog_2k" def_vhdl_version="vhdl_2008">
         <efx:top_module name="top_rubySoc"/>
-        <efx:design_file name="source/top_rubySoc.v" version="verilog_2k"/>
-        <efx:design_file name="source/memory_checker.v" version="verilog_2k"/>
-        <efx:design_file name="source/axi4_slave.v" version="verilog_2k"/>
-        <efx:design_file name="source/apb3_slave.v" version="verilog_2k"/>
-        <efx:design_file name="source/user_dual_port_ram.v" version="verilog_2k"/>
-        <efx:design_file name="source/EfxRiscvBmbDdrSoc.v" version="default"/>
-        <efx:design_file name="source/dma_soc.v" version="default"/>
-        <efx:design_file name="source/video_ctrl_top.v" version="default"/>
-        <efx:design_file name="source/true_dual_port_ram.v" version="default"/>
-        <efx:design_file name="source/color_coding_converter.v" version="default"/>
-        <efx:design_file name="source/aes_instruction.v" version="default"/>
+        <efx:design_file name="source/top_rubySoc.v" version="verilog_2k" library="default"/>
+        <efx:design_file name="source/memory_checker.v" version="verilog_2k" library="default"/>
+        <efx:design_file name="source/axi4_slave.v" version="verilog_2k" library="default"/>
+        <efx:design_file name="source/apb3_slave.v" version="verilog_2k" library="default"/>
+        <efx:design_file name="source/user_dual_port_ram.v" version="verilog_2k" library="default"/>
+        <efx:design_file name="source/EfxRiscvBmbDdrSoc.v" version="default" library="default"/>
+        <efx:design_file name="source/dma_soc.v" version="default" library="default"/>
+        <efx:design_file name="source/video_ctrl_top.v" version="default" library="default"/>
+        <efx:design_file name="source/true_dual_port_ram.v" version="default" library="default"/>
+        <efx:design_file name="source/color_coding_converter.v" version="default" library="default"/>
+        <efx:design_file name="source/aes_instruction.v" version="default" library="default"/>
         <efx:top_vhdl_arch name=""/>
     </efx:design_info>
     <efx:constraint_info>
@@ -26,6 +26,7 @@
     </efx:constraint_info>
     <efx:sim_info/>
     <efx:misc_info/>
+    <efx:ip_info/>
     <efx:synthesis tool_name="efx_map">
         <efx:param name="work_dir" value="work_syn" value_type="e_string"/>
         <efx:param name="write_efx_verilog" value="on" value_type="e_bool"/>
@@ -42,7 +43,7 @@
         <efx:param name="verbose" value="off" value_type="e_bool"/>
         <efx:param name="load_delaym" value="on" value_type="e_bool"/>
         <efx:param name="optimization_level" value="NULL" value_type="e_option"/>
-        <efx:param name="qp_options=anneal_random_seed=" value="43" value_type="e_integer"/>
+        <efx:param name="qp_options=anneal_random_seed=" value="60" value_type="e_integer"/>
     </efx:place_and_route>
     <efx:bitstream_generation tool_name="efx_pgm">
         <efx:param name="mode" value="active" value_type="e_option"/>
