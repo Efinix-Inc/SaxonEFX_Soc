@@ -54,16 +54,17 @@ class EfxRiscvBmbSocSystem(p : EfxRiscvBmbDdrSocParameter) extends VexRiscvClust
 }
 
 class EfxRiscvAxiDdrSocSystemWithArgs(p : EfxRiscvBmbDdrSocParameter) extends EfxRiscvBmbSocSystem(p){
-  val ddr = TrionDdrGenerator(
+  val ddr = p.withDdrA generate TrionDdrGenerator(
     addressWidth = p.ddrA.addressWidth,
     dataWidth = p.ddrA.dataWidth,
     mapping = p.ddrAMapping
   )
 
-  ddr.ddrMasters.load(p.ddrMasters)
-  ddr.ddrAConfig.load(p.ddrA)
-
-  interconnect.addConnection(bridge.bmb, ddr.bmb)
+  if(p.withDdrA) {
+    ddr.ddrMasters.load(p.ddrMasters)
+    ddr.ddrAConfig.load(p.ddrA)
+    interconnect.addConnection(bridge.bmb, ddr.bmb)
+  }
 
   ramA.address.load(p.onChipRamMapping.base)
   ramA.size.load(p.onChipRamSize)
@@ -81,6 +82,10 @@ class EfxRiscvAxiDdrSocSystemWithArgs(p : EfxRiscvBmbDdrSocParameter) extends Ef
       resetVector = 0xF9000000L,
       iBusWidth = 64,
       dBusWidth = 64,
+      iCacheSize = p.iCacheSize,
+      dCacheSize = p.dCacheSize,
+      iCacheWays = p.iCacheWays,
+      dCacheWays = p.dCacheWays,
       dBusCmdMasterPipe = true
     ))
     if(p.customInstruction) cpu.config.plugins +=  new CfuPlugin(
@@ -222,7 +227,7 @@ class EfxRiscvAxiDdrSocSystemWithArgs(p : EfxRiscvBmbDdrSocParameter) extends Ef
 
   val userInterrupts = for(spec <- p.interrupt) yield UserInterrupt(spec, plic)
 
-  val axiA = new Generator{
+  val axiA = p.withAxiA generate new Generator{
 
     val bmb = produce(logic.bmbToAxiBridge.io.input)
     val interrupt = produce(logic.interrupt)
@@ -274,33 +279,35 @@ class EfxRiscvAxiDdrSocSystemWithArgs(p : EfxRiscvBmbDdrSocParameter) extends Ef
   interconnect.setPipelining(fabric.invalidationMonitor.input)(invReady = true, ackValid =  true)
   interconnect.setPipelining(fabric.invalidationMonitor.output)(cmdValid = true, cmdReady = true, rspValid = true)
   interconnect.setPipelining(bmbPeripheral.bmb)(cmdHalfRate = true, rspHalfRate = true)
-  interconnect.setPipelining(ddr.bmb)(cmdValid = true, cmdReady = true, rspValid = true)
-  interconnect.setPipelining(axiA.bmb)(cmdValid = true, cmdReady = true, rspValid = true, rspReady = true)
+  p.withDdrA generate interconnect.setPipelining(ddr.bmb)(cmdValid = true, cmdReady = true, rspValid = true)
+  p.withAxiA generate interconnect.setPipelining(axiA.bmb)(cmdValid = true, cmdReady = true, rspValid = true, rspReady = true)
   interconnect.setPipelining(fabric.iBus.bmb)(cmdValid = true)
   for(cpu <- cores) interconnect.setPipelining(cpu.iBus)(rspValid = true)
 
   def pipelinedCd() = this.generatorClockDomain.derivate(cd => cd.copy(reset = cd(KeepAttribute(RegNext(cd.readResetWire)))))
   for(cpu <- cores) cpu.onClockDomain(pipelinedCd())
-  ddr.onClockDomain(pipelinedCd())
+  if(p.withDdrA) ddr.onClockDomain(pipelinedCd())
   i2c.foreach(_.onClockDomain(pipelinedCd()))
 }
 
-class EfxRiscvBmbDdrSoc(p : EfxRiscvBmbDdrSocParameter) extends Generator{
+class EfxRiscvBmbDdrSoc(val p : EfxRiscvBmbDdrSocParameter) extends Generator{
   val debugCd = ClockDomainResetGenerator()
   debugCd.holdDuration.load(4095)
   debugCd.enablePowerOnReset()
   debugCd.makeExternal(frequency = FixedFrequency(p.systemFrequency))
 
-  val ddrCd = ClockDomainResetGenerator()
-  ddrCd.holdDuration.load(63)
-  ddrCd.asyncReset(debugCd)
-  ddrCd.makeExternal(
-    withResetPin = false
-  )
+  val ddrCd = p.withDdrA generate ClockDomainResetGenerator()
+  if(p.withDdrA) {
+    ddrCd.holdDuration.load(63)
+    ddrCd.asyncReset(debugCd)
+    ddrCd.makeExternal(
+      withResetPin = false
+    )
+  }
 
   val systemCd = ClockDomainResetGenerator()
   systemCd.holdDuration.load(63)
-  systemCd.asyncReset(ddrCd)
+  systemCd.asyncReset(if(p.withDdrA) ddrCd else debugCd)
   systemCd.setInput(
     debugCd.outputClockDomain,
     omitReset = true
@@ -308,11 +315,45 @@ class EfxRiscvBmbDdrSoc(p : EfxRiscvBmbDdrSocParameter) extends Generator{
 
   val system = new EfxRiscvAxiDdrSocSystemWithArgs(p)
   system.onClockDomain(systemCd.outputClockDomain)
-  system.ddr.memoryClockDomain.merge(ddrCd.outputClockDomain)
-  system.ddr.systemClockDomain.merge(systemCd.outputClockDomain)
+
+  if(p.withDdrA) {
+    system.ddr.memoryClockDomain.merge(ddrCd.outputClockDomain)
+    system.ddr.systemClockDomain.merge(systemCd.outputClockDomain)
+  }
 
   val io_systemReset = systemCd.outputClockDomain.produce(out(systemCd.outputClockDomain.on(RegNext(systemCd.outputClockDomain.reset))))
-  val io_memoryReset = ddrCd.outputClockDomain.produce(out(ddrCd.outputClockDomain.on(RegNext(ddrCd.outputClockDomain.reset))))
+  val io_memoryReset = p.withDdrA generate ddrCd.outputClockDomain.produce(out(ddrCd.outputClockDomain.on(RegNext(ddrCd.outputClockDomain.reset))))
+
+  val hardJtag = !p.withSoftJtag generate new Area {
+    val debug = system.withDebugBus(debugCd, if(p.withDdrA) ddrCd else systemCd, 0x10B80000).withJtagInstruction()
+    val jtagCtrl = debug.produceIo(debug.logic.jtagBridge.io.ctrl).setName("jtagCtrl")
+    val jtagCtrl_tck = in(Bool()) setName("jtagCtrl_tck")
+    debug.jtagClockDomain.load(ClockDomain(jtagCtrl_tck))
+  }
+
+  val softJtag = p.withSoftJtag generate new Area {
+    val debug = system.withDebugBus(debugCd, if(p.withDdrA) ddrCd else systemCd, 0x10B80000).withJtagInstruction()
+    //        system.withoutDebug()
+    //        system.cpu.enableJtag(debugCd, ddrCd)
+    //        system.cpu.enableJtagInstructionCtrl(debugCd, ddrCd)
+    //
+    val jtag = new Generator {
+      val io = produce(slave(Jtag())).setName("jtag")
+      val clockDomain = produce(ClockDomain(io.tck))
+      produce(debug.jtagClockDomain.load(clockDomain.get))
+    }
+
+    val jtagTap = new Generator {
+      dependencies += debug.jtagInstruction
+      val logic = add task new Area {
+        val tap = jtag.clockDomain on new Area {
+          val tap = new JtagTap(jtag.io, 4)
+          val idcodeArea = tap.idcode(B"x00220a79")(5)
+          val wrapper = tap.map(debug.jtagInstruction, instructionId = 8)
+        }
+      }
+    }
+  }
 }
 
 
@@ -327,10 +368,9 @@ object EfxRiscvBmbDdrSoc {
       ).generateVerilog{
       val p = EfxRiscvBmbDdrSocParameter.defaultArgs(args)
       val toplevel = GeneratorComponent(new EfxRiscvBmbDdrSoc(p){
-        val debug = system.withDebugBus(debugCd, ddrCd, 0x10B80000).withJtagInstruction()
-        val jtagCtrl = debug.produceIo(debug.logic.jtagBridge.io.ctrl)
-        val jtagCtrl_tck = in Bool()
-        debug.jtagClockDomain.load(ClockDomain(jtagCtrl_tck))
+
+
+
       }).setDefinitionName("EfxRiscvBmbDdrSoc")
 
 //     toplevel.system.cpu.config.plugins.map{
@@ -373,7 +413,7 @@ object EfxRiscvAxiDdrSocSystemSim {
     simConfig.compile {
       val p = EfxRiscvBmbDdrSocParameter.defaultArgs(args)
       GeneratorComponent(new EfxRiscvBmbDdrSoc(p){
-        val ddrSim = system.ddr.ddrLogic.produce (new Area {
+        val ddrSim = p.withDdrA generate system.ddr.ddrLogic.produce (new Area {
           val axi4 = system.ddr.ddrLogic.io.ddrA.setAsDirectionLess.toAxi4()
           val readOnly = master(axi4.toReadOnly()).setName("ddrA_sim_readOnly")
           val writeOnly = master(axi4.toWriteOnly()).setName("ddrA_sim_writeOnly")
@@ -381,29 +421,6 @@ object EfxRiscvAxiDdrSocSystemSim {
             u.userClk.setAsDirectionLess() := ddrCd.inputClockDomain.clock.pull()
           }
         })
-
-        val debug = system.withDebugBus(debugCd, ddrCd, 0x10B80000).withJtagInstruction()
-//        system.withoutDebug()
-//        system.cpu.enableJtag(debugCd, ddrCd)
-//        system.cpu.enableJtagInstructionCtrl(debugCd, ddrCd)
-//
-        val jtag = new Generator{
-          val io = produce(slave(Jtag()))
-          val clockDomain = produce(ClockDomain(io.tck))
-          produce(debug.jtagClockDomain.load(clockDomain.get))
-        }
-
-        val jtagTap = new Generator {
-          dependencies += debug.jtagInstruction
-          val logic = add task new Area{
-            val tap = jtag.clockDomain on new Area{
-              val tap = new JtagTap(jtag.io, 4)
-              val idcodeArea = tap.idcode(B"x00220a79")(5)
-              val wrapper = tap.map(debug.jtagInstruction, instructionId = 8)
-            }
-          }
-        }
-
 
         val customInstructionAes = if(p.customInstruction) new Generator {
           dependencies += system.customInstruction
@@ -438,12 +455,12 @@ object EfxRiscvAxiDdrSocSystemSim {
 
       val clockDomain = dut.debugCd.inputClockDomain.get
       clockDomain.forkStimulus(systemClkPeriod)
-      val ddrCd = dut.ddrCd.inputClockDomain.get
-      ddrCd.forkStimulus(ddrClkPeriod)
+      val ddrCd = dut.p.withDdrA generate dut.ddrCd.inputClockDomain.get
+      if(dut.p.withDdrA) ddrCd.forkStimulus(ddrClkPeriod)
 //      ddrCd.forkSimSpeedPrinter()
 
       val tcpJtag = JtagTcp(
-        jtag = dut.jtag.io,
+        jtag = dut.softJtag.jtag.io,
         jtagClkPeriod = jtagClkPeriod
       )
 
@@ -459,7 +476,7 @@ object EfxRiscvAxiDdrSocSystemSim {
 
       val flash = FlashModel(dut.system.spi(0).io, clockDomain)
 
-      fork {
+      if(dut.p.withDdrA)fork {
         ddrCd.waitSampling(100)
         val ddrMemory = SparseMemory()
         val woa = new Axi4WriteOnlySlaveAgent(dut.ddrSim.writeOnly, ddrCd)
@@ -486,13 +503,15 @@ object EfxRiscvAxiDdrSocSystemSim {
 //        dut.system.axiA.logic.axiA.r.valid #= false
 
 
-        val axiAMemory = SparseMemory()
-        new Axi4WriteOnlySlaveAgent(dut.system.axiA.logic.axiA, clockDomain)
-        new Axi4WriteOnlyMonitor(dut.system.axiA.logic.axiA, clockDomain) {
-          override def onWriteByte(address: BigInt, data: Byte): Unit = axiAMemory.write(address.toLong, data)
-        }
-        new Axi4ReadOnlySlaveAgent(dut.system.axiA.logic.axiA, clockDomain) {
-          override def readByte(address: BigInt): Byte = axiAMemory.read(address.toLong)
+        if(dut.p.withAxiA){
+          val axiAMemory = SparseMemory()
+          new Axi4WriteOnlySlaveAgent(dut.system.axiA.logic.axiA, clockDomain)
+          new Axi4WriteOnlyMonitor(dut.system.axiA.logic.axiA, clockDomain) {
+            override def onWriteByte(address: BigInt, data: Byte): Unit = axiAMemory.write(address.toLong, data)
+          }
+          new Axi4ReadOnlySlaveAgent(dut.system.axiA.logic.axiA, clockDomain) {
+            override def readByte(address: BigInt): Byte = axiAMemory.read(address.toLong)
+          }
         }
 
 

@@ -58,6 +58,11 @@ case class RmiiSpec (     name : String,
 case class EfxRiscvBmbDdrSocParameter(systemFrequency : HertzNumber,
                                       onChipRamSize : BigInt,
                                       onChipRamHexFile : String,
+                                      iCacheSize : Int,
+                                      dCacheSize : Int,
+                                      iCacheWays : Int,
+                                      dCacheWays : Int,
+                                      withSoftJtag : Boolean,
                                       gpio : Seq[GpioSpec],
                                       uart : Seq[UartSpec],
                                       spi : Seq[SpiSpec],
@@ -70,17 +75,22 @@ case class EfxRiscvBmbDdrSocParameter(systemFrequency : HertzNumber,
                                       apbBridgeMapping : SizeMapping,
                                       axiAMapping      : SizeMapping,
                                       onChipRamMapping : SizeMapping,
-                                      cpu : VexRiscvConfig,
                                       ddrMasters : Seq[DdrMasterSpec],
                                       apbSlaves : Seq[ApbSlaveSpec],
                                       simulation : Boolean,
                                       customInstruction : Boolean,
-                                      cpuCount : Int)
+                                      cpuCount : Int,
+                                      withAxiA : Boolean = true,
+                                      withDdrA : Boolean = true)
 
 object EfxRiscvBmbDdrSocParameter{
   def defaultArgs(args : Seq[String]): EfxRiscvBmbDdrSocParameter ={
-    var iCacheSize = 4096
-    var dCacheSize = 4096
+    var iCacheSize = 8192
+    var dCacheSize = 8192
+    var iCacheWays = 2
+    var dCacheWays = 2
+    var withAxiA = true
+    var withDdrA = true
     var onChipRamHexFile = "software/standalone/bootloader/build/bootloader.hex"
     var systemFrequancy = 50000000
     var ddrADataWidth = 128
@@ -98,6 +108,7 @@ object EfxRiscvBmbDdrSocParameter{
     var linuxReady = false
     var cpuCount = 1
     var customInstruction = false
+    var withSoftJtag = false
     val gpio = ArrayBuffer[GpioSpec]()
     val uart = ArrayBuffer[UartSpec]()
     val spi = ArrayBuffer[SpiSpec]()
@@ -115,9 +126,14 @@ object EfxRiscvBmbDdrSocParameter{
       opt[String]("ramHex")  action { (v, c) => onChipRamHexFile = v } text(s"Set the main memory boot content with an hex file. Default $onChipRamHexFile")
       opt[Unit]("customInstruction")action { (v, c) => customInstruction = true } text(s"Add custom instruction interface. Default $customInstruction")
       opt[Unit]("linux")action { (v, c) => linuxReady = true } text(s"Default $linuxReady")
+      opt[Unit]("noDdrA")action { (v, c) => withDdrA = false } text(s"Turn off ddrA")
+      opt[Unit]("noAxiA")action { (v, c) => withAxiA = false } text(s"Turn off axiA")
       opt[Int]("cpuCount")action { (v, c) => cpuCount = v } text(s"Default $cpuCount")
+      opt[Unit]("softJtag")action { (v, c) => withSoftJtag = true } text(s"Add a jtag tap to the SoC. Default $withSoftJtag")
       opt[String]("iCacheSize")action { (v, c) => iCacheSize = decode(v).toInt } text(s"At least 32 and multiple of 32. Default $iCacheSize")
       opt[String]("dCacheSize")action { (v, c) => dCacheSize = decode(v).toInt } text(s"At least 32 and multiple of 32. Default $dCacheSize")
+      opt[String]("iCacheWays")action { (v, c) => iCacheWays = decode(v).toInt } text(s"At least 1 and power of 2. Default $iCacheWays")
+      opt[String]("dCacheWays")action { (v, c) => dCacheWays = decode(v).toInt } text(s"At least 1 and power of 32. Default $dCacheWays")
       opt[Int]("systemFrequancy")action { (v, c) => systemFrequancy = v } text(s"CPU + peripherals frequancy (set the UART baudrate at reset). Default $systemFrequancy")
       opt[String]("ddrADataWidth")action { (v, c) => ddrADataWidth = decode(v).toInt } text(s"Default $ddrADataWidth")
       opt[String]("uartBaudrate")action { (v, c) => uartBaudrate = decode(v).toInt } text(s"Default $uartBaudrate")
@@ -248,6 +264,8 @@ object EfxRiscvBmbDdrSocParameter{
     val config = EfxRiscvBmbDdrSocParameter.default(
       iCacheSize = iCacheSize,
       dCacheSize = dCacheSize,
+      iCacheWays = iCacheWays,
+      dCacheWays = dCacheWays,
       systemFrequancy = systemFrequancy,
       onChipRamSize = onChipRamSize.toInt,
       ddrADataWidth = ddrADataWidth,
@@ -265,11 +283,14 @@ object EfxRiscvBmbDdrSocParameter{
       gpio = gpio,
       uart = uart,
       spi = spi,
+      withSoftJtag = withSoftJtag,
       i2c = i2c,
       rmii = rmii,
       interrupt = interrupt,
       onChipRamHexFile = onChipRamHexFile,
-      cpuCount = cpuCount
+      cpuCount = cpuCount,
+      withDdrA = withDdrA,
+      withAxiA = withAxiA
     )
 
     config
@@ -280,6 +301,8 @@ object EfxRiscvBmbDdrSocParameter{
               customInstruction : Boolean,
               iCacheSize : Int = 4096,
               dCacheSize : Int = 4096,
+              iCacheWays : Int = 4096,
+              dCacheWays : Int = 4096,
               systemFrequancy : Int = 50000000,
               onChipRamSize : Int = 2048,
               ddrADataWidth : Int = 128,
@@ -295,6 +318,10 @@ object EfxRiscvBmbDdrSocParameter{
       onChipRamHexFile = "software/standalone/flashBootloader/build/flashBootloader.hex", //TODO
       customInstruction = customInstruction,
       cpuCount = 1,
+      iCacheSize = iCacheSize,
+      dCacheSize = dCacheSize,
+      iCacheWays = iCacheWays,
+      dCacheWays = dCacheWays,
       gpio = Nil,
       uart = Nil,
       spi = Nil,
@@ -317,145 +344,7 @@ object EfxRiscvBmbDdrSocParameter{
       onChipRamMapping = (0xF9000000L,   64 KiB),
       axiAMapping      = (0xFA000000L,   16 MiB),
       simulation = false,
-      cpu = VexRiscvConfig(
-        withMemoryStage = true,
-        withWriteBackStage = true,
-        plugins = List(
-          new IBusCachedPlugin(
-            resetVector = 0xF9000000L,
-            prediction = STATIC,
-            relaxedPcCalculation = false,
-            compressedGen = false,
-            injectorStage = false,
-            config = InstructionCacheConfig(
-              cacheSize = iCacheSize,
-              bytePerLine =32,
-              wayCount = 1,
-              addressWidth = 32,
-              cpuDataWidth = 32,
-              memDataWidth = 32,
-              catchIllegalAccess = true,
-              catchAccessFault = true,
-              asyncTagMemory = false,
-              twoCycleRam = true,
-              twoCycleCache = true
-            ),
-            memoryTranslatorPortConfig = linuxReady generate MmuPortConfig(
-              portTlbSize = 4
-            )
-          ),
-          new DBusCachedPlugin(
-            config = new DataCacheConfig(
-              cacheSize         = dCacheSize,
-              bytePerLine       = 32,
-              wayCount          = 1,
-              addressWidth      = 32,
-              cpuDataWidth      = 32,
-              memDataWidth      = 32,
-              catchAccessError  = true,
-              catchIllegal      = true,
-              catchUnaligned    = true,
-              withLrSc = linuxReady,
-              withAmo = linuxReady
-            ),
-            dBusCmdMasterPipe = true,
-            dBusCmdSlavePipe = true,
-            dBusRspSlavePipe = true,
-            memoryTranslatorPortConfig = linuxReady generate MmuPortConfig(
-              portTlbSize = 4
-            )
-          ),
-          if (!linuxReady) {
-            new StaticMemoryTranslatorPlugin(
-              ioRange = ioRange
-            )
-          } else {
-            new MmuPlugin(
-              ioRange = ioRange
-            )
-          },
-
-          new DecoderSimplePlugin(
-            catchIllegalInstruction = true
-          ),
-          new RegFilePlugin(
-            regFileReadyKind = plugin.SYNC,
-            zeroBoot = true,
-            x0Init = false,
-            readInExecute = false
-          ),
-          new IntAluPlugin,
-          new SrcPlugin(
-            separatedAddSub = false,
-            executeInsertion = false
-          ),
-          new FullBarrelShifterPlugin,
-          new MulPlugin,
-          new DivPlugin,
-          new HazardSimplePlugin(
-            bypassExecute           = true,
-            bypassMemory            = true,
-            bypassWriteBack         = true,
-            bypassWriteBackBuffer   = true
-          ),
-          new BranchPlugin(
-            earlyBranch = false,
-            catchAddressMisaligned = true,
-            decodeBranchSrc2 = true //for timings
-          ),
-          if(!linuxReady){
-            new CsrPlugin(
-              config = CsrPluginConfig(
-                catchIllegalAccess = true,
-                mvendorid      = null,
-                marchid        = null,
-                mimpid         = null,
-                mhartid        = 0,
-                misaExtensionsInit = 0,
-                misaAccess     = CsrAccess.NONE,
-                mtvecAccess    = CsrAccess.READ_WRITE,
-                mtvecInit      = null,
-                mepcAccess     = CsrAccess.READ_WRITE,
-                mscratchGen    = false,
-                mcauseAccess   = CsrAccess.READ_ONLY,
-                mbadaddrAccess = CsrAccess.READ_ONLY,
-                mcycleAccess   = CsrAccess.NONE,
-                minstretAccess = CsrAccess.NONE,
-                ecallGen       = true,
-                wfiGenAsWait   = false,
-                wfiGenAsNop    = true,
-                ucycleAccess   = CsrAccess.NONE
-              )
-            )
-          } else {
-            new CsrPlugin(CsrPluginConfig.openSbi(mhartid = 0, misa = Riscv.misaToInt("imas")).copy(
-              ebreakGen = false,
-              mtvecAccess = CsrAccess.READ_WRITE //Required by FREERTOS
-            ))
-          },
-          new YamlPlugin("cpu0.yaml")
-        )
-      )
-    )
-    if(customInstruction) config.cpu.plugins +=  new CfuPlugin(
-      stageCount = 1,
-      allowZeroLatency = true,
-      encodings = List(
-        CfuPluginEncoding (
-          instruction = M"-------------------------0001011",
-          functionId = List(31 downto 25, 14 downto 12),
-          input2Kind = CfuPlugin.Input2Kind.RS
-        )
-      ),
-      busParameter = CfuBusParameter(
-        CFU_FUNCTION_ID_W = 10,
-        CFU_INPUTS = 2,
-        CFU_INPUT_DATA_W = 32,
-        CFU_OUTPUTS = 1,
-        CFU_OUTPUT_DATA_W = 32,
-        CFU_FLOW_REQ_READY_ALWAYS = false,
-        CFU_FLOW_RESP_READY_ALWAYS = false
-      )
+      withSoftJtag = false
     )
     config
   }
