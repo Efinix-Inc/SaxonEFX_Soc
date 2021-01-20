@@ -381,12 +381,16 @@ object EfxRiscvBmbDdrSoc {
       //Match previous version names
       toplevel.debugCd.inputClockDomain.clock.setName("io_systemClk")
       toplevel.debugCd.inputClockDomain.reset.setName("io_asyncReset")
-      toplevel.ddrCd.inputClockDomain.clock.setName("io_memoryClk")
-      toplevel.system.ddr.ddrLogic.io.setName("io")
+      if(p.withDdrA) {
+        toplevel.ddrCd.inputClockDomain.clock.setName("io_memoryClk")
+        toplevel.system.ddr.ddrLogic.io.setName("io")
+      }
 
       toplevel.io_systemReset.get.setName("io_systemReset")
-      toplevel.io_memoryReset.get.setName("io_memoryReset")
-      toplevel.system.axiA.interrupt.get.setName("io_axiAInterrupt")
+      if(p.withAxiA) {
+        toplevel.io_memoryReset.get.setName("io_memoryReset")
+        toplevel.system.axiA.interrupt.get.setName("io_axiAInterrupt")
+      }
 
       toplevel
     }
