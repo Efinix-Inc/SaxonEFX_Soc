@@ -43,7 +43,7 @@ class EfxRiscvBmbSocSystem(p : EfxRiscvBmbDdrSocParameter) extends VexRiscvClust
   bmbPeripheral.mapping.load(p.apbBridgeMapping)
 
   val ramA = BmbOnChipRamGenerator()
-  ramA.dataWidth.load(32)
+  ramA.dataWidth.load(64)
 
   val bridge = BmbBridgeGenerator()
   interconnect.addConnection(
