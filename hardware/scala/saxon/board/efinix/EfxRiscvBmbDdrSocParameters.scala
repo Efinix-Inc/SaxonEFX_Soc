@@ -81,7 +81,8 @@ case class EfxRiscvBmbDdrSocParameter(systemFrequency : HertzNumber,
                                       customInstruction : Boolean,
                                       cpuCount : Int,
                                       withAxiA : Boolean = true,
-                                      withDdrA : Boolean = true)
+                                      withDdrA : Boolean = true,
+                                      linuxReady : Boolean = true)
 
 object EfxRiscvBmbDdrSocParameter{
   def defaultArgs(args : Seq[String]): EfxRiscvBmbDdrSocParameter ={
@@ -105,7 +106,7 @@ object EfxRiscvBmbDdrSocParameter{
     var onChipRamSize : BigInt = 2048
     var axiAAddress : BigInt = 0xFA000000L
     var axiASize : BigInt = 16 MiB
-    var linuxReady = false
+    var linuxReady = true
     var cpuCount = 1
     var customInstruction = false
     var withSoftJtag = false
@@ -125,7 +126,7 @@ object EfxRiscvBmbDdrSocParameter{
       help("help").text("prints this usage text")
       opt[String]("ramHex")  action { (v, c) => onChipRamHexFile = v } text(s"Set the main memory boot content with an hex file. Default $onChipRamHexFile")
       opt[Unit]("customInstruction")action { (v, c) => customInstruction = true } text(s"Add custom instruction interface. Default $customInstruction")
-      opt[Unit]("linux")action { (v, c) => linuxReady = true } text(s"Default $linuxReady")
+      opt[Unit]("noLinux")action { (v, c) => linuxReady = false } text(s"Default $linuxReady")
       opt[Unit]("noDdrA")action { (v, c) => withDdrA = false } text(s"Turn off ddrA")
       opt[Unit]("noAxiA")action { (v, c) => withAxiA = false } text(s"Turn off axiA")
       opt[Int]("cpuCount")action { (v, c) => cpuCount = v } text(s"Default $cpuCount")
@@ -270,7 +271,6 @@ object EfxRiscvBmbDdrSocParameter{
       onChipRamSize = onChipRamSize.toInt,
       ddrADataWidth = ddrADataWidth,
       uartBaudrate = uartBaudrate,
-      linuxReady = linuxReady,
       customInstruction = customInstruction,
       ioRange = address => apbBridgeMapping.hit(address) || axiAMapping.hit(address)
     ).copy(
@@ -290,15 +290,15 @@ object EfxRiscvBmbDdrSocParameter{
       onChipRamHexFile = onChipRamHexFile,
       cpuCount = cpuCount,
       withDdrA = withDdrA,
-      withAxiA = withAxiA
+      withAxiA = withAxiA,
+      linuxReady = linuxReady
     )
 
     config
   }
 
   //Default configuration of the SoC
-  def default(linuxReady : Boolean,
-              customInstruction : Boolean,
+  def default(customInstruction : Boolean,
               iCacheSize : Int = 4096,
               dCacheSize : Int = 4096,
               iCacheWays : Int = 4096,

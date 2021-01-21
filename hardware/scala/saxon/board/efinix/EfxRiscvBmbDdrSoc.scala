@@ -86,7 +86,9 @@ class EfxRiscvAxiDdrSocSystemWithArgs(p : EfxRiscvBmbDdrSocParameter) extends Ef
       dCacheSize = p.dCacheSize,
       iCacheWays = p.iCacheWays,
       dCacheWays = p.dCacheWays,
-      dBusCmdMasterPipe = true
+      dBusCmdMasterPipe = true,
+      withMmu = p.linuxReady,
+      withSupervisor = p.linuxReady
     ))
     if(p.customInstruction) cpu.config.plugins +=  new CfuPlugin(
       stageCount = 2,
@@ -478,7 +480,7 @@ object EfxRiscvAxiDdrSocSystemSim {
         baudPeriod = uartBaudPeriod
       )
 
-      val flash = FlashModel(dut.system.spi(0).io, clockDomain)
+      val flash = if(dut.system.spi.size != 0) FlashModel(dut.system.spi(0).io, clockDomain)
 
       if(dut.p.withDdrA)fork {
         ddrCd.waitSampling(100)
