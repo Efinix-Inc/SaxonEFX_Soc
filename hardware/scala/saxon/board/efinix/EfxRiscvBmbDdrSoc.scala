@@ -276,6 +276,7 @@ class EfxRiscvAxiDdrSocSystemWithArgs(p : EfxRiscvBmbDdrSocParameter) extends Ef
 
   interconnect.masters(bridge.bmb).withPerSourceDecoder()
   // Add some interconnect pipelining to improve FMax
+  interconnect.setPipelining(bridge.bmb)(cmdValid = true, cmdReady = true)
   for(cpu <- cores) interconnect.setPipelining(cpu.dBus)(cmdValid = true, invValid = true, ackValid = true, syncValid = true)
   interconnect.setPipelining(fabric.exclusiveMonitor.input)(cmdValid = true, cmdReady = true, rspValid = true)
   interconnect.setPipelining(fabric.invalidationMonitor.input)(invReady = true, ackValid =  true)
