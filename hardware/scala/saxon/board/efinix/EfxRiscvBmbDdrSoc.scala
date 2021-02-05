@@ -88,7 +88,8 @@ class EfxRiscvAxiDdrSocSystemWithArgs(p : EfxRiscvBmbDdrSocParameter) extends Ef
       dCacheWays = p.dCacheWays,
       dBusCmdMasterPipe = true,
       withMmu = p.linuxReady,
-      withSupervisor = p.linuxReady
+      withSupervisor = p.linuxReady,
+      regfileRead = vexriscv.plugin.SYNC
     ))
     if(p.customInstruction) cpu.config.plugins +=  new CfuPlugin(
       stageCount = 2,
@@ -397,6 +398,15 @@ object EfxRiscvBmbDdrSoc {
 
       toplevel
     }
+//    val cpu = report.toplevel.system.cores(0).logic.get.cpu
+//    val cache = cpu.children.find(_.getName().contains("IBus")).get
+//    val source = cache.reflectBaseType("_zz_14")
+//    val destination = cpu.reflectBaseType("CsrPlugin_exceptionPortCtrl_exceptionContext_badAddr")
+//    val destination = cpu.reflectBaseType("IBusCachedPlugin_decodeExceptionPort_valid")
+//    val destination = cache.reflectBaseType("fetchStage_read_waysValues_0_tag_address")
+//    val destination = cpu.reflectBaseType("IBusCachedPlugin_iBusRsp_stages_0_input_payload")
+//    val destination = cpu.reflectBaseType("IBusCachedPlugin_decodeExceptionPort_valid")
+//    println("len : " + LatencyAnalysis(source, destination))
     BspGenerator("efinix/EfxRiscvBmbDdrSoc", report.toplevel.generator, report.toplevel.generator.system.cores(0).dBus)
   }
 }
