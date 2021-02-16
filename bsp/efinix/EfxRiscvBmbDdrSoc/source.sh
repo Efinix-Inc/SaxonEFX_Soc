@@ -26,7 +26,7 @@ saxon_patch(){
 saxon_netlist(){
   cd $SAXON_SOC
   sbt "runMain saxon.board.efinix.EfxRiscvBmbDdrSoc \
-  --systemFrequancy 66666666  \
+  --systemFrequency 66666666  \
   --ddrADataWidth 128  \
   --ddrASize 0xf7fff000  \
   --onChipRamSize 0x1000  \

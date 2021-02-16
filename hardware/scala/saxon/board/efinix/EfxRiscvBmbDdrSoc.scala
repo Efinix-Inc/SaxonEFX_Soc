@@ -31,7 +31,7 @@ import spinal.lib.sim.SparseMemory
 import spinal.lib.system.debugger.JtagBridge
 import vexriscv.VexRiscvBmbGenerator
 import vexriscv.demo.smp.VexRiscvSmpClusterGen
-import vexriscv.plugin.{AesPlugin, CfuBus, CfuBusParameter, CfuPlugin, CfuPluginEncoding, CsrPlugin, CsrPluginConfig}
+import vexriscv.plugin.{AesPlugin, CfuBus, CfuBusParameter, CfuPlugin, CfuPluginEncoding, CsrPlugin, CsrPluginConfig, MulPlugin}
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -42,8 +42,9 @@ class EfxRiscvBmbSocSystem(p : EfxRiscvBmbDdrSocParameter) extends VexRiscvClust
   val fabric = this.withDefaultFabric(withOutOfOrderDecoder = false)
   bmbPeripheral.mapping.load(p.apbBridgeMapping)
 
+  val generalDataWidth = if(p.withDdrA || p.cpuCount > 1) 64 else 32
   val ramA = BmbOnChipRamGenerator()
-  ramA.dataWidth.load(64)
+  ramA.dataWidth.load(generalDataWidth)
 
   val bridge = BmbBridgeGenerator()
   interconnect.addConnection(
@@ -80,17 +81,22 @@ class EfxRiscvAxiDdrSocSystemWithArgs(p : EfxRiscvBmbDdrSocParameter) extends Ef
       hartId = coreId,
       ioRange =address => p.apbBridgeMapping.hit(address) || p.axiAMapping.hit(address), //_ (31 downto 28) === 0xF,
       resetVector = 0xF9000000L,
-      iBusWidth = 64,
-      dBusWidth = 64,
+      iBusWidth = generalDataWidth,
+      dBusWidth = generalDataWidth,
       iCacheSize = p.iCacheSize,
       dCacheSize = p.dCacheSize,
       iCacheWays = p.iCacheWays,
       dCacheWays = p.dCacheWays,
       dBusCmdMasterPipe = true,
+      injectorStage = true,
       withMmu = p.linuxReady,
       withSupervisor = p.linuxReady,
       regfileRead = vexriscv.plugin.SYNC
     ))
+
+    val mul = cpu.config.get.get(classOf[MulPlugin])
+    mul.outputBuffer = true
+
     if(p.customInstruction) cpu.config.plugins +=  new CfuPlugin(
       stageCount = 2,
       allowZeroLatency = true,
@@ -275,7 +281,10 @@ class EfxRiscvAxiDdrSocSystemWithArgs(p : EfxRiscvBmbDdrSocParameter) extends Ef
     }
   }
 
-  interconnect.masters(bridge.bmb).withPerSourceDecoder()
+  if(cores.size != 1) {
+    interconnect.masters(bridge.bmb).withPerSourceDecoder()
+  }
+  interconnect.setPipelining(ramA.ctrl)(rspValid = true)
   // Add some interconnect pipelining to improve FMax
   interconnect.setPipelining(bridge.bmb)(cmdValid = true, cmdReady = true)
   for(cpu <- cores) interconnect.setPipelining(cpu.dBus)(cmdValid = true, invValid = true, ackValid = true, syncValid = true)

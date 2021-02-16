@@ -135,7 +135,7 @@ object EfxRiscvBmbDdrSocParameter{
       opt[String]("dCacheSize")action { (v, c) => dCacheSize = decode(v).toInt } text(s"At least 32 and multiple of 32. Default $dCacheSize")
       opt[String]("iCacheWays")action { (v, c) => iCacheWays = decode(v).toInt } text(s"At least 1 and power of 2. Default $iCacheWays")
       opt[String]("dCacheWays")action { (v, c) => dCacheWays = decode(v).toInt } text(s"At least 1 and power of 32. Default $dCacheWays")
-      opt[Int]("systemFrequancy")action { (v, c) => systemFrequancy = v } text(s"CPU + peripherals frequancy (set the UART baudrate at reset). Default $systemFrequancy")
+      opt[Int]("systemFrequency")action { (v, c) => systemFrequancy = v } text(s"CPU + peripherals frequency (set the UART baudrate at reset). Default $systemFrequancy")
       opt[String]("ddrADataWidth")action { (v, c) => ddrADataWidth = decode(v).toInt } text(s"Default $ddrADataWidth")
       opt[String]("uartBaudrate")action { (v, c) => uartBaudrate = decode(v).toInt } text(s"Default $uartBaudrate")
       opt[String]("ddrAAddress")action { (v, c) => ddrAAddress = decode(v) } text(s"Default 0x${ddrAAddress.toString(16)}")
