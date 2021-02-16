@@ -165,3 +165,15 @@ And the rsp stream is :
 
 During a read burst the source and context signal should remain stable.
 
+### Quick Build
+```sh
+source build.sh
+#Ruby Soc For DDR efinix Device with cache
+build_netlist_Ruby
+#Jade Soc with cache
+build_netlist_Jade
+#Opal Soc with cache-less
+build_netlist_Opal
+```
+
+copy hardware/netlist/\*Soc.v and hardware/netlist/\*.bin to efinity project folder
