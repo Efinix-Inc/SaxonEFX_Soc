@@ -11,7 +11,6 @@ module aes_instruction (
 
   output             rsp_valid,
   input              rsp_ready,
-  output             rsp_response_ok,
   output    [31:0]   rsp_outputs_0
 );
 
@@ -184,6 +183,5 @@ module aes_instruction (
     end
   end
 
-  assign rsp_response_ok = 1'b1;
   assign rsp_outputs_0   = s2_result;
 endmodule

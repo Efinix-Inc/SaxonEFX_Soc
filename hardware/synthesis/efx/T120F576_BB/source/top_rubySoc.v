@@ -19,6 +19,9 @@
 /////////////////////////////////////////////////////////////////////////////////
 `timescale 1ns / 1ps
 
+
+`define CPU_COUNT 4
+
 module top_rubySoc (
 	//Debug
     input  bscan_CAPTURE,
@@ -413,7 +416,6 @@ memory_checker #(
 							
 );
 
-  `define CPU_COUNT 4
 
   wire             cpu_customInstruction_cmd_valid [0:`CPU_COUNT-1];
   wire             cpu_customInstruction_cmd_ready[0:`CPU_COUNT-1];
@@ -422,7 +424,6 @@ memory_checker #(
   wire    [31:0]   cpu_customInstruction_inputs_1[0:`CPU_COUNT-1];
   wire             cpu_customInstruction_rsp_valid[0:`CPU_COUNT-1];
   wire             cpu_customInstruction_rsp_ready[0:`CPU_COUNT-1];
-  wire             cpu_customInstruction_response_ok[0:`CPU_COUNT-1];
   wire    [31:0]   cpu_customInstruction_outputs_0[0:`CPU_COUNT-1];
 
 
@@ -440,7 +441,6 @@ generate
        .cmd_inputs_1(cpu_customInstruction_inputs_1[i]),
        .rsp_valid(cpu_customInstruction_rsp_valid[i]),
        .rsp_ready(cpu_customInstruction_rsp_ready[i]),
-       .rsp_response_ok(cpu_customInstruction_response_ok[i]),
        .rsp_outputs_0(cpu_customInstruction_outputs_0[i])
       );
 end
@@ -738,7 +738,6 @@ assign probes[7] = system_i2c_0_io_scl_write;
   .cpu``id``_customInstruction_inputs_1    (cpu_customInstruction_inputs_1[``id``]), \
   .cpu``id``_customInstruction_rsp_valid   (cpu_customInstruction_rsp_valid[``id``]), \
   .cpu``id``_customInstruction_rsp_ready   (cpu_customInstruction_rsp_ready[``id``]), \
-  .cpu``id``_customInstruction_response_ok (cpu_customInstruction_response_ok[``id``]), \
   .cpu``id``_customInstruction_outputs_0   (cpu_customInstruction_outputs_0[``id``])
 
 

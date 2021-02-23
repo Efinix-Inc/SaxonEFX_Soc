@@ -24,6 +24,7 @@ saxon_patch(){
 }
 
 saxon_netlist(){
+  if [ -z ${SAXON_CPU_COUNT+x} ]; then echo "SAXON_CPU_COUNT need to be set"; return 1;  fi
   cd $SAXON_SOC
   sbt "runMain saxon.board.efinix.EfxRiscvBmbDdrSoc \
   --systemFrequency 66666666  \

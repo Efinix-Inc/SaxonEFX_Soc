@@ -117,27 +117,6 @@ class EfxRiscvAxiDdrSocSystemWithArgs(p : EfxRiscvBmbDdrSocParameter) extends Ef
         CFU_FLOW_RESP_READY_ALWAYS = false
       )
     )
-//    cpu.config.plugins += new AesPlugin()
-//    cpu.config.plugins +=  new CfuPlugin(
-//      stageCount = 1,
-//      allowZeroLatency = true,
-//      encodings = List(
-//        CfuPluginEncoding (
-//          instruction = M"-------------------------0001011",
-//          functionId = List(31 downto 25, 14 downto 12),
-//          input2Kind = CfuPlugin.Input2Kind.RS
-//        )
-//      ),
-//      busParameter = CfuBusParameter(
-//        CFU_FUNCTION_ID_W = 10,
-//        CFU_INPUTS = 2,
-//        CFU_INPUT_DATA_W = 32,
-//        CFU_OUTPUTS = 1,
-//        CFU_OUTPUT_DATA_W = 32,
-//        CFU_FLOW_REQ_READY_ALWAYS = false,
-//        CFU_FLOW_RESP_READY_ALWAYS = false
-//      )
-//    )
   }
 
   val uart = for((spec, i) <- p.uart.zipWithIndex) yield {
@@ -465,7 +444,6 @@ object EfxRiscvAxiDdrSocSystemSim {
 
               bb.rsp_valid <> bus.rsp.valid
               bb.rsp_ready <> bus.rsp.ready
-              bb.rsp_response_ok <> bus.rsp.response_ok
               bb.rsp_outputs_0 <> bus.rsp.outputs(0)
               bb
             }
