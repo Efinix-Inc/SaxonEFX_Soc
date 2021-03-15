@@ -718,14 +718,17 @@ assign hdmi_de = yuv_de;
 assign hdmi_txd = yuv_data;
 
 
+
+
+
 assign probes[0] = system_uart_0_io_txd;
 assign probes[1] = system_spi_1_io_sclk;
 assign probes[2] = system_spi_1_io_ss;
 assign probes[3] = hdmi_de;
-assign probes[4] = dma_hdmi_0_tvalid;
-assign probes[5] = dma_hdmi_0_tready;
-assign probes[6] = system_i2c_0_io_sda_write;
-assign probes[7] = system_i2c_0_io_scl_write;
+assign probes[4] = cpu_customInstruction_rsp_ready[0];
+assign probes[5] = cpu_customInstruction_rsp_valid[0];
+assign probes[6] = cpu_customInstruction_cmd_ready[0];
+assign probes[7] = cpu_customInstruction_cmd_valid[0];
 
 //Marco Wu Added for Debug
 /////////////////////////////////////////////////////////////////////////////

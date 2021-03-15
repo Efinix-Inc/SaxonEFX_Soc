@@ -3,6 +3,7 @@ package saxon.board.efinix
 
 import saxon._
 import spinal.core._
+import spinal.core.fiber._
 import spinal.lib._
 import spinal.core.sim._
 import spinal.lib.bus.amba3.apb.Apb3Config
@@ -72,8 +73,8 @@ class EfxRiscvAxiDdrSocSystemWithArgs(p : EfxRiscvBmbDdrSocParameter) extends Ef
   ramA.hexInit.load(p.onChipRamHexFile)
 
 
-  plic.apbOffset.loadi(0xC00000)
-  clint.apbOffset.loadi(0xB00000)
+  plic.apbOffset.load( BigInt(0xC00000))
+  clint.apbOffset.load(BigInt(0xB00000))
 
   // Configure the CPUs
   for((cpu, coreId) <- cores.zipWithIndex) {
@@ -188,7 +189,7 @@ class EfxRiscvAxiDdrSocSystemWithArgs(p : EfxRiscvBmbDdrSocParameter) extends Ef
   val apbSlaves = for((spec, i) <- p.apbSlaves.zipWithIndex) yield {
     val g = BmbToApb3Generator(mapping = spec.mapping)
     g.setName(spec.name)
-    g.produceIo(g.logic.io.output).derivate(_.setName(spec.name))
+    Handle(g.logic.io.output.toIo.setName(spec.name))
     g.apb3Config load Apb3Config(
         addressWidth = log2Up(spec.mapping.size),
         dataWidth = 32
@@ -196,11 +197,9 @@ class EfxRiscvAxiDdrSocSystemWithArgs(p : EfxRiscvBmbDdrSocParameter) extends Ef
     g
   }
 
-  val customInstruction = p.customInstruction generate new Generator {
-    dependencies ++= cores
-
+  val customInstruction = p.customInstruction generate new Area {
     val io = ArrayBuffer[CfuBus]()
-    add task {
+    val loaded = Handle {
       for ((core, coreId) <- cores.zipWithIndex if core.logic.cpu.serviceExist(classOf[CfuPlugin])) {
         val cfu = core.logic.cpu.service(classOf[CfuPlugin]).bus
         val bus = (master(cloneOf(cfu)))
@@ -276,13 +275,13 @@ class EfxRiscvAxiDdrSocSystemWithArgs(p : EfxRiscvBmbDdrSocParameter) extends Ef
   interconnect.setPipelining(fabric.iBus.bmb)(cmdValid = true)
   for(cpu <- cores) interconnect.setPipelining(cpu.iBus)(rspValid = true)
 
-  def pipelinedCd() = this.generatorClockDomain.derivate(cd => cd.copy(reset = cd(KeepAttribute(RegNext(cd.readResetWire)))))
-  for(cpu <- cores) cpu.onClockDomain(pipelinedCd())
-  if(p.withDdrA) ddr.onClockDomain(pipelinedCd())
-  i2c.foreach(_.onClockDomain(pipelinedCd()))
+  def pipelinedCd() = Handle(ClockDomain.current.copy(reset = ClockDomain.current(KeepAttribute(RegNext(ClockDomain.current.readResetWire)))))
+//  for(cpu <- cores) cpu.onClockDomain(pipelinedCd()) //TODO bring me back
+//  if(p.withDdrA) ddr.onClockDomain(pipelinedCd())
+//  i2c.foreach(_.onClockDomain(pipelinedCd()))
 }
 
-class EfxRiscvBmbDdrSoc(val p : EfxRiscvBmbDdrSocParameter) extends Generator{
+class EfxRiscvBmbDdrSoc(val p : EfxRiscvBmbDdrSocParameter) extends Component{
   val debugCd = ClockDomainResetGenerator()
   debugCd.holdDuration.load(4095)
   debugCd.enablePowerOnReset()
@@ -305,12 +304,11 @@ class EfxRiscvBmbDdrSoc(val p : EfxRiscvBmbDdrSocParameter) extends Generator{
     omitReset = true
   )
 
-  val system = new EfxRiscvAxiDdrSocSystemWithArgs(p)
-  system.onClockDomain(systemCd.outputClockDomain)
+  val system = systemCd.outputClockDomain on new EfxRiscvAxiDdrSocSystemWithArgs(p)
 
   if(p.withDdrA) {
-    system.ddr.memoryClockDomain.merge(ddrCd.outputClockDomain)
-    system.ddr.systemClockDomain.merge(systemCd.outputClockDomain)
+    system.ddr.memoryClockDomain.load(ddrCd.outputClockDomain)
+    system.ddr.systemClockDomain.load(systemCd.outputClockDomain)
   }
 
   val io_systemReset = systemCd.outputClockDomain.produce(out(systemCd.outputClockDomain.on(RegNext(systemCd.outputClockDomain.reset))))
@@ -318,7 +316,7 @@ class EfxRiscvBmbDdrSoc(val p : EfxRiscvBmbDdrSocParameter) extends Generator{
 
   val hardJtag = !p.withSoftJtag generate new Area {
     val debug = system.withDebugBus(debugCd, if(p.withDdrA) ddrCd else systemCd, 0x10B80000).withJtagInstruction()
-    val jtagCtrl = debug.produceIo(debug.logic.jtagBridge.io.ctrl).setName("jtagCtrl")
+    val jtagCtrl = Handle(debug.logic.jtagBridge.io.ctrl.toIo).setName("jtagCtrl")
     val jtagCtrl_tck = in(Bool()) setName("jtagCtrl_tck")
     debug.jtagClockDomain.load(ClockDomain(jtagCtrl_tck))
   }
@@ -359,29 +357,24 @@ object EfxRiscvBmbDdrSoc {
         inlineRom = false
       ).generateVerilog{
       val p = EfxRiscvBmbDdrSocParameter.defaultArgs(args)
-      val toplevel = GeneratorComponent(new EfxRiscvBmbDdrSoc(p){
-
-
-
-      }).setDefinitionName("EfxRiscvBmbDdrSoc")
-
-//     toplevel.system.cpu.config.plugins.map{
-//       case p : CsrPlugin => p.printCsr()
-//       case _ =>
-//     }
-
-      //Match previous version names
-      toplevel.debugCd.inputClockDomain.clock.setName("io_systemClk")
-      toplevel.debugCd.inputClockDomain.reset.setName("io_asyncReset")
-      if(p.withDdrA) {
-        toplevel.ddrCd.inputClockDomain.clock.setName("io_memoryClk")
-        toplevel.system.ddr.ddrLogic.io.setName("io")
+      val toplevel = new EfxRiscvBmbDdrSoc(p){
+        setDefinitionName("EfxRiscvBmbDdrSoc")
       }
 
-      toplevel.io_systemReset.get.setName("io_systemReset")
-      if(p.withAxiA) {
-        toplevel.io_memoryReset.get.setName("io_memoryReset")
-        toplevel.system.axiA.interrupt.get.setName("io_axiAInterrupt")
+      //Match previous version names
+      Handle {
+        toplevel.debugCd.inputClockDomain.clock.setName("io_systemClk")
+        toplevel.debugCd.inputClockDomain.reset.setName("io_asyncReset")
+        if (p.withDdrA) {
+          toplevel.ddrCd.inputClockDomain.clock.setName("io_memoryClk")
+          toplevel.system.ddr.ddrLogic.io.setName("io")
+        }
+
+        toplevel.io_systemReset.get.setName("io_systemReset")
+        if (p.withAxiA) {
+          toplevel.io_memoryReset.get.setName("io_memoryReset")
+          toplevel.system.axiA.interrupt.get.setName("io_axiAInterrupt")
+        }
       }
 
       toplevel
@@ -395,7 +388,7 @@ object EfxRiscvBmbDdrSoc {
 //    val destination = cpu.reflectBaseType("IBusCachedPlugin_iBusRsp_stages_0_input_payload")
 //    val destination = cpu.reflectBaseType("IBusCachedPlugin_decodeExceptionPort_valid")
 //    println("len : " + LatencyAnalysis(source, destination))
-    BspGenerator("efinix/EfxRiscvBmbDdrSoc", report.toplevel.generator, report.toplevel.generator.system.cores(0).dBus)
+    BspGenerator("efinix/EfxRiscvBmbDdrSoc", report.toplevel, report.toplevel.system.cores(0).dBus)
   }
 }
 
@@ -409,7 +402,7 @@ object EfxRiscvAxiDdrSocSystemSim {
 
     val simConfig = SimConfig
     simConfig.allOptimisation
-    simConfig.withFstWave
+//    simConfig.withFstWave
 //    simConfig.withIVerilog
 
     simConfig.addIncludeDir("../aesVerilog")
@@ -417,7 +410,7 @@ object EfxRiscvAxiDdrSocSystemSim {
     simConfig.addSimulatorFlag("-Wno-UNSIGNED")
     simConfig.compile {
       val p = EfxRiscvBmbDdrSocParameter.defaultArgs(args)
-      GeneratorComponent(new EfxRiscvBmbDdrSoc(p){
+      new EfxRiscvBmbDdrSoc(p){
         val ddrSim = p.withDdrA generate system.ddr.ddrLogic.produce (new Area {
           val axi4 = system.ddr.ddrLogic.io.ddrA.setAsDirectionLess.toAxi4()
           val readOnly = master(axi4.toReadOnly()).setName("ddrA_sim_readOnly")
@@ -427,30 +420,27 @@ object EfxRiscvAxiDdrSocSystemSim {
           }
         })
 
-        val customInstructionAes = if(p.customInstruction) new Generator {
-          dependencies += system.customInstruction
-          onClockDomain(systemCd.outputClockDomain)
-
-          add task {
-            for (bus <- system.customInstruction.io) {
-              bus.setAsDirectionLess
-              val bb = aes_instruction()
-              bb.cmd_valid <> bus.cmd.valid
-              bb.cmd_ready <> bus.cmd.ready
-              bb.cmd_function_id <> bus.cmd.function_id
-              bb.cmd_inputs_0 <> bus.cmd.inputs(0)
-              bb.cmd_inputs_1 <> bus.cmd.inputs(1)
+        val customInstructionAes = if(p.customInstruction) systemCd.outputClockDomain on Handle {
+          system.customInstruction.loaded.get
+          for (bus <- system.customInstruction.io) {
+            bus.setAsDirectionLess
+            val bb = aes_instruction()
+            bb.setName("aes",weak = true)
+            bb.cmd_valid <> bus.cmd.valid
+            bb.cmd_ready <> bus.cmd.ready
+            bb.cmd_function_id <> bus.cmd.function_id
+            bb.cmd_inputs_0 <> bus.cmd.inputs(0)
+            bb.cmd_inputs_1 <> bus.cmd.inputs(1)
 
 
-              bb.rsp_valid <> bus.rsp.valid
-              bb.rsp_ready <> bus.rsp.ready
-              bb.rsp_outputs_0 <> bus.rsp.outputs(0)
-              bb
-            }
+            bb.rsp_valid <> bus.rsp.valid
+            bb.rsp_ready <> bus.rsp.ready
+            bb.rsp_outputs_0 <> bus.rsp.outputs(0)
+            bb
           }
         }
-      })
-    }.doSimUntilVoid("test", 43){dut =>
+      }
+    }.doSimUntilVoid("test", 41){dut =>
       val systemClkPeriod = (1e12/dut.debugCd.inputClockDomain.frequency.getValue.toDouble).toLong
       val ddrClkPeriod = (1e12/100e6).toLong
       val jtagClkPeriod = systemClkPeriod*4
@@ -520,16 +510,15 @@ object EfxRiscvAxiDdrSocSystemSim {
 
 
         val images = "../buildroot-build/images/"
-
         ddrMemory.loadBin(0x00001000, images + "fw_jump.bin")
-        //ddrMemory.loadBin(0x00100000, images + "u-boot.bin")
-        ddrMemory.loadBin(0x00400000, images + "uImage")
-        ddrMemory.loadBin(0x00FF0000, images + "linux.dtb")
-        ddrMemory.loadBin(0x00FFFFC0, images + "rootfs.cpio.uboot")
-
-        //Bypass uboot
-        ddrMemory.loadBin(0x00400000, images + "Image")
-        List(0x00000897, 0x01088893, 0x0008a883 , 0x000880e7, 0x00400000).zipWithIndex.foreach{case (v,i) => ddrMemory.write(0x00100000+i*4, v)}
+        ddrMemory.loadBin(0x00100000, images + "u-boot.bin")
+//        ddrMemory.loadBin(0x00400000, images + "uImage")
+//        ddrMemory.loadBin(0x00FF0000, images + "linux.dtb")
+//        ddrMemory.loadBin(0x00FFFFC0, images + "rootfs.cpio.uboot")
+//
+//        //Bypass uboot
+//        ddrMemory.loadBin(0x00400000, images + "Image")
+//        List(0x00000897, 0x01088893, 0x0008a883 , 0x000880e7, 0x00400000).zipWithIndex.foreach{case (v,i) => ddrMemory.write(0x00100000+i*4, v)}
 
 //        ddrMemory.loadBin(0x00001000, "software/standalone/test/aes/build/aes.bin")
 
@@ -540,7 +529,7 @@ object EfxRiscvAxiDdrSocSystemSim {
 
       fork{
         val at = 0
-        val duration = 0
+        val duration = 5
         while(simTime() < at*1000000000l) {
           disableSimWave()
           sleep(100000 * 10000)

@@ -3,7 +3,10 @@ package saxon.board.efinix
 import org.apache.commons.io.FileUtils
 import spinal.core._
 import spinal.core.sim._
+import spinal.lib.bus.amba4.axi.{Axi4, Axi4Config}
+import spinal.lib.bus.amba4.axi.sim.{AxiMemorySim, AxiMemorySimConfig}
 import spinal.lib.com.uart.sim.UartDecoder
+import spinal.lib.master
 import spinal.lib.sim.SparseMemory
 
 import scala.collection.mutable
@@ -41,9 +44,9 @@ case class top_rubySoc_io() extends Bundle{
   val video_clk_148_90 = in Bool()
   val video_clk_148 = in Bool()
   val video_clkx2 = in Bool()
-  val apb3LED = out Bool()
-  val memoryCheckerDone = out Bool()
-  val memoryCheckerPass = out Bool()
+//  val apb3LED = out Bool()
+//  val memoryCheckerDone = out Bool()
+//  val memoryCheckerPass = out Bool()
 //  val hdmi_clk_out = out Bool()
   val hdmi_de = out Bool()
   val hdmi_vsync = out Bool()
@@ -77,6 +80,23 @@ case class top_rubySoc_io() extends Bundle{
   val system_gpio_0_io_read = in Bits(1+4 bits)
   val system_gpio_0_io_write = out Bits(1+4 bits)
   val system_gpio_0_io_writeEnable = out Bits(1+4 bits)
+//  val io_ddrA = master(Axi4(Axi4Config(
+//    addressWidth = 32,
+//    dataWidth = 128,
+//    idWidth = 8,
+//    useId = true,
+//    useRegion = false,
+//    useBurst = true,
+//    useLock = true,
+//    useCache = false,
+//    useSize = false,
+//    useQos = false,
+//    useLen = true,
+//    useLast = false,
+//    useResp = false,
+//    useProt = false,
+//    useStrb = true
+//  )))
   val io_ddrA_arw_valid = out Bool()
   val io_ddrA_arw_ready = in Bool()
   val io_ddrA_arw_payload_addr = out Bits(1+31 bits)
@@ -154,33 +174,37 @@ object EfxDebugSoc extends App{
   val c = SimConfig
   c.withFstWave
 
-  val rtlRoot = "/media/data/open/SaxonSoc/efinix/soc_Ruby/soc_Ruby_hw/"
+  val rtlRoot = "/media/data/open/SaxonSoc/efinix/SaxonEFX_Soc/hardware/synthesis/efx/T120F576_BB/"
 
-  EfxRiscvBmbDdrSoc.main("--dCacheSize 4096 --iCacheSize 4096 --ddrADataWidth 128 --ddrASize 0xf7fff000 --onChipRamSize 0x1000 --axiAAddress 0xfa000000 --axiASize 0x1000 --apbSlave name=io_apbSlave_0,address=0x800000,size=4096 --apbSlave name=io_dma_ctrl,address=0x804000,size=16384 --ddrMaster name=io_ddrMasters_0,dataWidth=32 --gpio name=system_gpio_0_io,address=0x000000,width=16,interrupts=0->12;1->13 --uart name=system_uart_0_io,address=0x10000,interruptId=1 --uart name=system_uart_1_io,address=0x11000,interruptId=2 --spi name=system_spi_0_io,address=0x14000,interruptId=4 --spi name=system_spi_1_io,address=0x15000,interruptId=5 --spi name=system_spi_2_io,address=0x16000,interruptId=6 --i2c name=system_i2c_0_io,address=0x18000,interruptId=8 --i2c name=system_i2c_1_io,address=0x19000,interruptId=9 --i2c name=system_i2c_2_io,address=0x1A000,interruptId=10 --interrupt name=userInterruptA,id=25 --ramHex software/standalone/bootloader/build/bootloader.hex --cpuCount=2 --customInstruction".split(" "))
+  EfxRiscvBmbDdrSoc.main("--dCacheSize 4096 --iCacheSize 4096 --ddrADataWidth 128 --ddrASize 0xf7fff000 --onChipRamSize 0x8000 --axiAAddress 0xfa000000 --axiASize 0x1000 --apbSlave name=io_apbSlave_0,address=0x800000,size=4096 --apbSlave name=io_dma_ctrl,address=0x804000,size=16384 --ddrMaster name=io_ddrMasters_0,dataWidth=32 --gpio name=system_gpio_0_io,address=0x000000,width=16,interrupts=0->12;1->13 --uart name=system_uart_0_io,address=0x10000,interruptId=1 --uart name=system_uart_1_io,address=0x11000,interruptId=2 --spi name=system_spi_0_io,address=0x14000,interruptId=4 --spi name=system_spi_1_io,address=0x15000,interruptId=5 --spi name=system_spi_2_io,address=0x16000,interruptId=6 --i2c name=system_i2c_0_io,address=0x18000,interruptId=8 --i2c name=system_i2c_1_io,address=0x19000,interruptId=9 --i2c name=system_i2c_2_io,address=0x1A000,interruptId=10 --interrupt name=userInterruptA,id=25 --ramHex software/standalone/test/aes/build/bootloader_spinal_sim.hex --cpuCount=4 --customInstruction".split(" "))
 
   FileUtils.copyFile(new java.io.File("hardware/netlist/EfxRiscvBmbDdrSoc.v"), new java.io.File(rtlRoot + "source/EfxRiscvBmbDdrSoc.v"))
   val binCp = List(
     "EfxRiscvBmbDdrSoc.v_toplevel_system_ramA_logic_ram_symbol0.bin",
     "EfxRiscvBmbDdrSoc.v_toplevel_system_ramA_logic_ram_symbol1.bin",
     "EfxRiscvBmbDdrSoc.v_toplevel_system_ramA_logic_ram_symbol2.bin",
-    "EfxRiscvBmbDdrSoc.v_toplevel_system_ramA_logic_ram_symbol3.bin"
+    "EfxRiscvBmbDdrSoc.v_toplevel_system_ramA_logic_ram_symbol3.bin",
+    "EfxRiscvBmbDdrSoc.v_toplevel_system_ramA_logic_ram_symbol4.bin",
+    "EfxRiscvBmbDdrSoc.v_toplevel_system_ramA_logic_ram_symbol5.bin",
+    "EfxRiscvBmbDdrSoc.v_toplevel_system_ramA_logic_ram_symbol6.bin",
+    "EfxRiscvBmbDdrSoc.v_toplevel_system_ramA_logic_ram_symbol7.bin"
   )
   for(bin <- binCp){
     FileUtils.copyFile(new java.io.File(s"hardware/netlist/$bin"), new java.io.File(rtlRoot + s"source/$bin"))
-    FileUtils.copyFile(new java.io.File(s"hardware/netlist/$bin"), new java.io.File(rtlRoot + s"T120F576_BB/$bin"))
+    FileUtils.copyFile(new java.io.File(s"hardware/netlist/$bin"), new java.io.File(rtlRoot + s"$bin"))
   }
 
 
   c.addIncludeDir(rtlRoot + "source")
 
   val rtl = List(
-    rtlRoot + "T120F576_BB/top_rubySoc.v",
+    rtlRoot + "source/top_rubySoc.v",
     rtlRoot + "source/memory_checker.v",
     rtlRoot + "source/axi4_slave.v",
     rtlRoot + "source/apb3_slave.v",
     rtlRoot + "source/user_dual_port_ram.v",
-    rtlRoot + "T120F576_BB/tgp_marco.v",
-    rtlRoot + "T120F576_BB/sync_extract.v",
+//    rtlRoot + "source/tgp_marco.v",
+//    rtlRoot + "source/sync_extract.v",
     rtlRoot + "source/EfxRiscvBmbDdrSoc.v",
     rtlRoot + "source/aes_instruction.v",
     rtlRoot + "source/video_ctrl_top.v",
@@ -191,19 +215,23 @@ object EfxDebugSoc extends App{
   for(f <- rtl) c.addRtl(f)
 
   val bin = List(
-    rtlRoot + "T120F576_BB/EfxRiscvBmbDdrSoc.v_toplevel_system_ramA_logic_ram_symbol0.bin",
-    rtlRoot + "T120F576_BB/EfxRiscvBmbDdrSoc.v_toplevel_system_ramA_logic_ram_symbol1.bin",
-    rtlRoot + "T120F576_BB/EfxRiscvBmbDdrSoc.v_toplevel_system_ramA_logic_ram_symbol2.bin",
-    rtlRoot + "T120F576_BB/EfxRiscvBmbDdrSoc.v_toplevel_system_ramA_logic_ram_symbol3.bin",
-    rtlRoot + "T120F576_BB/rom_a00.mem",
-    rtlRoot + "T120F576_BB/rom_a01.mem",
-    rtlRoot + "T120F576_BB/rom_a02.mem",
-    rtlRoot + "T120F576_BB/rom_a10.mem",
-    rtlRoot + "T120F576_BB/rom_a11.mem",
-    rtlRoot + "T120F576_BB/rom_a12.mem",
-    rtlRoot + "T120F576_BB/rom_a20.mem",
-    rtlRoot + "T120F576_BB/rom_a21.mem",
-    rtlRoot + "T120F576_BB/rom_a22.mem"
+    rtlRoot + "EfxRiscvBmbDdrSoc.v_toplevel_system_ramA_logic_ram_symbol0.bin",
+    rtlRoot + "EfxRiscvBmbDdrSoc.v_toplevel_system_ramA_logic_ram_symbol1.bin",
+    rtlRoot + "EfxRiscvBmbDdrSoc.v_toplevel_system_ramA_logic_ram_symbol2.bin",
+    rtlRoot + "EfxRiscvBmbDdrSoc.v_toplevel_system_ramA_logic_ram_symbol3.bin",
+    rtlRoot + "EfxRiscvBmbDdrSoc.v_toplevel_system_ramA_logic_ram_symbol4.bin",
+    rtlRoot + "EfxRiscvBmbDdrSoc.v_toplevel_system_ramA_logic_ram_symbol5.bin",
+    rtlRoot + "EfxRiscvBmbDdrSoc.v_toplevel_system_ramA_logic_ram_symbol6.bin",
+    rtlRoot + "EfxRiscvBmbDdrSoc.v_toplevel_system_ramA_logic_ram_symbol7.bin",
+    rtlRoot + "rom_a00.mem",
+    rtlRoot + "rom_a01.mem",
+    rtlRoot + "rom_a02.mem",
+    rtlRoot + "rom_a10.mem",
+    rtlRoot + "rom_a11.mem",
+    rtlRoot + "rom_a12.mem",
+    rtlRoot + "rom_a20.mem",
+    rtlRoot + "rom_a21.mem",
+    rtlRoot + "rom_a22.mem"
   )
   for(f <- bin) c.addRtl(f)
 
@@ -230,6 +258,8 @@ object EfxDebugSoc extends App{
       video_clk_148_90.forkStimulus(6734)
     }
 
+//    val axiMemory = AxiMemorySim(dut.io.io_ddrA, io_memoryClk, new AxiMemorySimConfig())
+
 
     val memory = SparseMemory()
     val dmaReadQueue = mutable.Queue[(Array[Byte], Boolean)]()
@@ -237,6 +267,7 @@ object EfxDebugSoc extends App{
     for(i <- 0x100000 to 0x1000000 by 4){
       memory.write(i, i.toInt)
     }
+    memory.loadBin(0x1000, "software/standalone/test/aes/build/aes.bin")
 
     dut.io.dma_arwready #= true
 
@@ -258,7 +289,9 @@ object EfxDebugSoc extends App{
     dut.io.system_uart_0_io_rxd #= true
 
 
-    io_memoryClk.waitSampling(1000)
+
+
+    io_memoryClk.waitSampling(10)
     io_memoryClk.onSamplings{
       dut.io.system_i2c_0_io_sda_read #= dut.io.system_i2c_0_io_sda_write.toBoolean
       dut.io.system_i2c_0_io_scl_read #= dut.io.system_i2c_0_io_scl_write.toBoolean

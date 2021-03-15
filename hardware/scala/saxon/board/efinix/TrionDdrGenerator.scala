@@ -11,7 +11,8 @@ import spinal.lib.generator._
 import spinal.lib.io.Gpio
 import spinal.lib._
 import spinal.lib.bus.bmb
-import spinal.lib.bus.bmb.{BmbAccessCapabilities, BmbAccessParameter, BmbInterconnectGenerator, BmbParameter, BmbToAxi4SharedBridge}
+import spinal.lib.bus.bmb.{BmbAccessCapabilities, BmbAccessParameter, BmbCcFifo, BmbInterconnectGenerator, BmbParameter, BmbToAxi4SharedBridge}
+import spinal.core.fiber._
 
 
 
@@ -25,7 +26,7 @@ case class TrionDdrGenerator(addressWidth : Int, dataWidth : Int, mapping: Addre
 
 
 
-  val bmb = produce(systemLogic.bmbToAxiBridge.io.input)
+  val bmb = produce(ddrLogic.cc.io.input)
 
   val accessSource = Handle[BmbAccessCapabilities]
   val accessRequirements = createDependency[BmbAccessParameter]
@@ -43,11 +44,7 @@ case class TrionDdrGenerator(addressWidth : Int, dataWidth : Int, mapping: Addre
   )
 
   val systemLogic = add task new ClockingArea(systemClockDomain){
-    val bmbToAxiBridge = BmbToAxi4SharedBridge(
-      bmbConfig = accessRequirements.toBmbParameter(),
-      pendingMax = 63,
-      halfRateAw = false
-    )
+
   }
 
   val ddrLogic = add task new ClockingArea(memoryClockDomain){
@@ -56,23 +53,28 @@ case class TrionDdrGenerator(addressWidth : Int, dataWidth : Int, mapping: Addre
       val ddrA_w_payload_id = out UInt(ddrAConfig.idWidth bits) //AXI3 requirement
     }
 
-    val systemToMemoryBridge = Axi4SharedCC(
-      axiConfig = Axi4Config(32, ddrAConfig.dataWidth, 2),
-      inputCd = systemClockDomain ,
-      outputCd = memoryClockDomain,
-      arwFifoSize = 16,
-      rFifoSize = 64,
-      wFifoSize = 64,
-      bFifoSize = 16
+    val cc = BmbCcFifo(
+      p =  accessRequirements.toBmbParameter(),
+      cmdDepth = 64,
+      rspDepth = 64,
+      inputCd = systemClockDomain,
+      outputCd = memoryClockDomain
     )
-    systemToMemoryBridge.io.input << systemLogic.bmbToAxiBridge.io.output
 
-    val cpuAccess = Axi4Shared(systemToMemoryBridge.axiConfig)
+    val bmbToAxiBridge = BmbToAxi4SharedBridge(
+      bmbConfig = accessRequirements.toBmbParameter(),
+      pendingMax = 63,
+      halfRateAw = false
+    )
+    bmbToAxiBridge.io.input << cc.io.output.pipelined(cmdValid = true, rspValid = true)
+
+
+    val cpuAccess = Axi4Shared(bmbToAxiBridge.axiConfig)
     //Heavy pipelining
-    systemToMemoryBridge.io.output.sharedCmd.s2mPipe().m2sPipe().m2sPipe() >> cpuAccess.sharedCmd
-    systemToMemoryBridge.io.output.writeData.s2mPipe().m2sPipe().m2sPipe() >> cpuAccess.writeData
-    systemToMemoryBridge.io.output.writeRsp  <-/< cpuAccess.writeRsp
-    systemToMemoryBridge.io.output.readRsp   <-/< cpuAccess.readRsp
+    bmbToAxiBridge.io.output.sharedCmd.s2mPipe().m2sPipe().m2sPipe() >> cpuAccess.sharedCmd
+    bmbToAxiBridge.io.output.writeData.s2mPipe().m2sPipe().m2sPipe() >> cpuAccess.writeData
+    bmbToAxiBridge.io.output.writeRsp  <-/< cpuAccess.writeRsp
+    bmbToAxiBridge.io.output.readRsp   <-/< cpuAccess.readRsp
 
     //Arbiter used to connect cpuAccess and all user's masters
     val arbiter = Axi4SharedArbiter(
