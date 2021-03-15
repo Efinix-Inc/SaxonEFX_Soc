@@ -1,23 +1,24 @@
 package saxon
 
 import spinal.core._
+import spinal.core.fiber._
 import spinal.lib._
 import spinal.lib.bus.bmb._
 import spinal.lib.bus.misc.SizeMapping
 import spinal.lib.com.jtag.{JtagInstructionDebuggerGenerator, JtagTapDebuggerGenerator}
 import spinal.lib.com.jtag.xilinx.Bscane2BmbMasterGenerator
-import spinal.lib.generator.{ClockDomainResetGenerator, Generator, Handle}
+import spinal.lib.generator._
 import spinal.lib.misc.plic.PlicMapping
 import vexriscv.VexRiscvBmbGenerator
 import vexriscv.plugin.CsrPlugin
 
-class VexRiscvClusterGenerator(cpuCount : Int) extends Generator {
+class VexRiscvClusterGenerator(cpuCount : Int) extends Area {
   // Define the BMB interconnect utilities
   implicit val interconnect = BmbInterconnectGenerator()
   val bmbPeripheral = BmbBridgeGenerator(mapping = SizeMapping(0x10000000, 16 MiB)).peripheral(dataWidth = 32)
   implicit val peripheralDecoder = bmbPeripheral.asPeripheralDecoder()
 
-  // Define the main interrupt controllers
+//   Define the main interrupt controllers
   val plic = BmbPlicGenerator(0xC00000)
   plic.priorityWidth.load(2)
   plic.mapping.load(PlicMapping.sifive)
@@ -56,19 +57,19 @@ class VexRiscvClusterGenerator(cpuCount : Int) extends Generator {
       invalidationMonitor.output -> List(dBus.bmb)
     )
 
-   for(cpu <- cores) {
-      interconnect.addConnection(
-        cpu.iBus -> List(iBus.bmb),
-        cpu.dBus -> List(dBusCoherent.bmb)
-      )
-    }
+    for(cpu <- cores) {
+       interconnect.addConnection(
+         cpu.iBus -> List(iBus.bmb),
+         cpu.dBus -> List(dBusCoherent.bmb)
+       )
+     }
 
     if(withOutOfOrderDecoder) interconnect.masters(dBus.bmb).withOutOfOrderDecoder()
   }
 
   // Utility to create the debug fabric usable by JTAG
   def withDebugBus(debugCd : ClockDomainResetGenerator, systemCd : ClockDomainResetGenerator, address : Long) = new Area{
-    val ctrl = BmbBridgeGenerator() onClockDomain(debugCd.outputClockDomain)
+    val ctrl = debugCd.outputClockDomain on BmbBridgeGenerator()
 
     for ((cpu,i) <- cores.zipWithIndex) {
       cores(i).enableDebugBmb(debugCd, systemCd, SizeMapping(address + i * 0x1000, 0x1000))
@@ -76,21 +77,21 @@ class VexRiscvClusterGenerator(cpuCount : Int) extends Generator {
     }
 
     def withJtag() = {
-      val tap = JtagTapDebuggerGenerator() onClockDomain(debugCd.outputClockDomain)
+      val tap = debugCd.outputClockDomain on JtagTapDebuggerGenerator()
       interconnect.addConnection(tap.bmb, ctrl.bmb)
       tap
     }
 
 
     def withJtagInstruction() = {
-      val tap = JtagInstructionDebuggerGenerator() onClockDomain(debugCd.outputClockDomain)
+      val tap = debugCd.outputClockDomain on JtagInstructionDebuggerGenerator()
       interconnect.addConnection(tap.bmb, ctrl.bmb)
       tap
     }
 
     // For Xilinx series 7 FPGA
     def withBscane2(userId : Int) = {
-      val tap = Bscane2BmbMasterGenerator(userId) onClockDomain(debugCd.outputClockDomain)
+      val tap = debugCd.outputClockDomain on Bscane2BmbMasterGenerator(userId)
       interconnect.addConnection(tap.bmb, ctrl.bmb)
       tap
     }

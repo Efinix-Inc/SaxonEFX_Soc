@@ -1,7 +1,6 @@
 *.class
 *.log
 *.bak
-*.un~
 
 # sbt specific
 .cache/
