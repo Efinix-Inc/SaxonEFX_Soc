@@ -40,12 +40,15 @@ import scala.collection.mutable.ArrayBuffer
 
 
 class EfxRiscvBmbSocSystem(p : EfxRiscvBmbDdrSocParameter) extends VexRiscvClusterGenerator(p.cpuCount){
-  val fabric = this.withDefaultFabric(withOutOfOrderDecoder = false)
+  val fabric = withDefaultFabric(withOutOfOrderDecoder = false)
   bmbPeripheral.mapping.load(p.apbBridgeMapping)
 
-  val generalDataWidth = if(p.withDdrA || p.cpuCount > 1) 64 else 32
+  val fpu = p.withFpu generate new FpuIntegration(){
+    setParameters(extraStage = p.cpuCount > 1)
+  }
+
+  val generalDataWidth = if(p.withDdrA || p.cpuCount > 1 || p.withFpu) 64 else 32
   val ramA = BmbOnChipRamGenerator()
-  ramA.dataWidth.load(generalDataWidth)
 
   val bridge = BmbBridgeGenerator()
   interconnect.addConnection(
@@ -84,12 +87,16 @@ class EfxRiscvAxiDdrSocSystemWithArgs(p : EfxRiscvBmbDdrSocParameter) extends Ef
       resetVector = 0xF9000000L,
       iBusWidth = generalDataWidth,
       dBusWidth = generalDataWidth,
+      loadStoreWidth = if (p.withFpu) 64 else 32,
       iCacheSize = p.iCacheSize,
       dCacheSize = p.dCacheSize,
       iCacheWays = p.iCacheWays,
       dCacheWays = p.dCacheWays,
       dBusCmdMasterPipe = true,
       injectorStage = true,
+      withFloat = p.withFpu,
+      withDouble = p.withFpu,
+      externalFpu = p.withFpu,
       withMmu = p.linuxReady,
       withSupervisor = p.linuxReady,
       regfileRead = vexriscv.plugin.SYNC
@@ -525,6 +532,7 @@ object EfxRiscvAxiDdrSocSystemSim {
 //        ddrMemory.loadBin(0x00001000, "software/standalone/timerAndGpioInterruptDemo/build/timerAndGpioInterruptDemo_spinal_sim.bin")
 //        ddrMemory.loadBin(0x00001000, "software/standalone/dhrystone/build/dhrystone.bin")
 //        ddrMemory.loadBin(0x00001000, "software/standalone/freertosDemo/build/freertosDemo_spinal_sim.bin")
+          ddrMemory.loadBin(0x00001000, "software/standalone/fpu/build/fpu.bin")
       }
 
       fork{

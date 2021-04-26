@@ -80,6 +80,7 @@ case class EfxRiscvBmbDdrSocParameter(systemFrequency : HertzNumber,
                                       simulation : Boolean,
                                       customInstruction : Boolean,
                                       cpuCount : Int,
+                                      withFpu : Boolean,
                                       withAxiA : Boolean = true,
                                       withDdrA : Boolean = true,
                                       linuxReady : Boolean = true)
@@ -116,6 +117,7 @@ object EfxRiscvBmbDdrSocParameter{
     val i2c = ArrayBuffer[I2cSpec]()
     val rmii = ArrayBuffer[RmiiSpec]()
     val interrupt = ArrayBuffer[InterruptSpec]()
+    var withFpu = false
 
     def decode(str : String) = if(str.contains("0x"))
       BigInt(str.replace("0x",""), 16)
@@ -129,6 +131,7 @@ object EfxRiscvBmbDdrSocParameter{
       opt[Unit]("noLinux")action { (v, c) => linuxReady = false } text(s"Default $linuxReady")
       opt[Unit]("noDdrA")action { (v, c) => withDdrA = false } text(s"Turn off ddrA")
       opt[Unit]("noAxiA")action { (v, c) => withAxiA = false } text(s"Turn off axiA")
+      opt[Unit]("withFpu")action { (v, c) => withFpu = true } text(s"Turn on the FPU generation")
       opt[Int]("cpuCount")action { (v, c) => cpuCount = v } text(s"Default $cpuCount")
       opt[Unit]("softJtag")action { (v, c) => withSoftJtag = true } text(s"Add a jtag tap to the SoC. Default $withSoftJtag")
       opt[String]("iCacheSize")action { (v, c) => iCacheSize = decode(v).toInt } text(s"At least 32 and multiple of 32. Default $iCacheSize")
@@ -289,6 +292,7 @@ object EfxRiscvBmbDdrSocParameter{
       interrupt = interrupt,
       onChipRamHexFile = onChipRamHexFile,
       cpuCount = cpuCount,
+      withFpu = withFpu,
       withDdrA = withDdrA,
       withAxiA = withAxiA,
       linuxReady = linuxReady
@@ -343,6 +347,7 @@ object EfxRiscvBmbDdrSocParameter{
       apbBridgeMapping = (0xF8000000L,   16 MiB),
       onChipRamMapping = (0xF9000000L,   64 KiB),
       axiAMapping      = (0xFA000000L,   16 MiB),
+      withFpu = false,
       simulation = false,
       withSoftJtag = false
     )
