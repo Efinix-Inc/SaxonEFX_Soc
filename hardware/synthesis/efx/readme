@@ -1,0 +1,67 @@
+Broken => 
+
+rawrr@rawrr:/media/data/open/SaxonSoc/efinix/SaxonEFX_Soc$ telnet localhost 4444
+Trying 127.0.0.1...
+Connected to localhost.
+Escape character is '^]'.
+Open On-Chip Debugger
+> mdw 0xF9000000 8
+0xf9000000: 00001197 bc818193 8001ac23 f1402573 02050e63 8181a503 fe050ee3 0220000f 
+
+> mww 0xF9000000 0x00000000
+> mdw 0xF9000000 8
+0xf9000000: 00000000 bc818193 8001ac23 f1402573 02050e63 8181a503 fe050ee3 0220000f 
+
+> mww 0xF9000000 0xFFFFFFFF
+> mdw 0xF9000000 8
+0xf9000000: 000fffff bc818193 8001ac23 f1402573 02050e63 8181a503 fe050ee3 0220000f 
+
+> 
+> 
+> mdw 0x1000 8
+0x00001000: 000fffff aa2aaaaa aaaaaaaa 2aaaaaaa aaaaabea 8aaaab23 2a28aaaa aa8aaaaa 
+
+> mww 0x1000 0x00000000
+> mdw 0x1000 8
+0x00001000: 00000000 aa2aaaaa aaaaaaaa 2aaaaaaa aaaaabea 8aaaab23 2a28aaaa aa8aaaaa 
+
+> mww 0x1000 0xFFFFFFFF
+> mdw 0x1000 8
+0x00001000: 000fffff aa2aaaaa aaaaaaaa 2aaaaaaa aaaaabea 8aaaab23 2a28aaaa aa8aaaaa 
+
+> 
+
+
+Less borken => 
+
+rawrr@rawrr:/media/data/open/SaxonSoc/efinix/SaxonEFX_Soc$ telnet localhost 4444
+Trying 127.0.0.1...
+Connected to localhost.
+Escape character is '^]'.
+Open On-Chip Debugger
+> mdw 0xF9000000 8
+0xf9000000: 00001197 bc818193 8001ac23 f1402573 02050e63 8181a503 fe050ee3 0220000f 
+
+> mww 0xF9000000 0x00000000
+> mdw 0xF9000000 8
+0xf9000000: 00000000 bc818193 8001ac23 f1402573 02050e63 8181a503 fe050ee3 0220000f 
+
+> mww 0xF9000000 0xFFFFFFFF
+> mdw 0xF9000000 8
+0xf9000000: ffffffff bc818193 8001ac23 f1402573 02050e63 8181a503 fe050ee3 0220000f 
+
+> 
+> 
+> mdw 0x1000 8
+0x00001000: 000fffff aa2aaaaa aaaaaaaa 2aaaaaaa aaaaabea 8aaaab23 2a28aaaa aa8aaaaa 
+
+> mww 0x1000 0x00000000
+> mdw 0x1000 8
+0x00001000: 00000000 aa2aaaaa aaaaaaaa 2aaaaaaa aaaaabea 8aaaab23 2a28aaaa aa8aaaaa 
+
+> mww 0x1000 0xFFFFFFFF
+> mdw 0x1000 8
+0x00001000: ffffffff aa2aaaaa aaaaaaaa 2aaaaaaa aaaaabea 8aaaab23 2a28aaaa aa8aaaaa 
+
+> 
+

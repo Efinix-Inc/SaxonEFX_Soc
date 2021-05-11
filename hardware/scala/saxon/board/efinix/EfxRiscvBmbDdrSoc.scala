@@ -409,7 +409,7 @@ object EfxRiscvAxiDdrSocSystemSim {
 
     val simConfig = SimConfig
     simConfig.allOptimisation
-//    simConfig.withFstWave
+    simConfig.withFstWave
 //    simConfig.withIVerilog
 
     simConfig.addIncludeDir("../aesVerilog")
@@ -532,12 +532,12 @@ object EfxRiscvAxiDdrSocSystemSim {
 //        ddrMemory.loadBin(0x00001000, "software/standalone/timerAndGpioInterruptDemo/build/timerAndGpioInterruptDemo_spinal_sim.bin")
 //        ddrMemory.loadBin(0x00001000, "software/standalone/dhrystone/build/dhrystone.bin")
 //        ddrMemory.loadBin(0x00001000, "software/standalone/freertosDemo/build/freertosDemo_spinal_sim.bin")
-          ddrMemory.loadBin(0x00001000, "software/standalone/fpu/build/fpu.bin")
+//          ddrMemory.loadBin(0x00001000, "software/standalone/fpu/build/fpu.bin")
       }
 
       fork{
         val at = 0
-        val duration = 5
+        val duration = 2
         while(simTime() < at*1000000000l) {
           disableSimWave()
           sleep(100000 * 10000)
