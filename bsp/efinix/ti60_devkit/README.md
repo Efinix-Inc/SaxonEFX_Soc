@@ -116,10 +116,9 @@ cp -f hardware/netlist/EfxRiscvBmbDdrSoc.v*.bin hardware/synthesis/efx/ti60_devk
 ! run the hardware/synthesis/efx/ti60_devkit project and programe the board !
 
 # Build the firmware
-saxon_buildroot
+saxon_buildroot #If the build fail, try to rerun the make command in the buildroot-build folder
 
 # Build the programming tools
-saxon_standalone_compile sdramInit
 saxon_openocd
 ```
 
