@@ -1,38 +1,22 @@
 ## Generating the netlist
 
-The strict minimum is :
+For the hardware/synthesis/efx/ti60_devkit : 
 
 ```sh
-sbt "runMain saxon.board.efinix.EfxRiscvBmbDdrSoc"
-```
-
-But for the hardware/synthesis/efx/T120F576_BB : 
-
-```sh
-sbt "runMain saxon.board.efinix.EfxRiscvBmbDdrSoc \
-  --systemFrequancy 66666666  \
+  sbt "runMain saxon.board.efinix.EfxRiscvBmbDdrSoc \
+  --systemFrequency 100000000  \
   --ddrADataWidth 128  \
-  --ddrASize 0xf7fff000  \
+  --ddrASize 0x1FFF000  \
   --onChipRamSize 0x1000  \
-  --axiAAddress 0xfa000000  \
-  --axiASize 0x1000  \
-  --apbSlave name=io_apbSlave_0,address=0x800000,size=4096  \
-  --apbSlave name=io_dma_ctrl,address=0x804000,size=16384  \
-  --ddrMaster name=io_ddrMasters_0,dataWidth=32  \
   --gpio name=system_gpio_0_io,address=0x000000,width=16,interrupts=0->12/1->13  \
   --uart name=system_uart_0_io,address=0x10000,interruptId=1  \
-  --uart name=system_uart_1_io,address=0x11000,interruptId=2  \
   --spi name=system_spi_0_io,address=0x14000,interruptId=4  \
   --spi name=system_spi_1_io,address=0x15000,interruptId=5  \
-  --spi name=system_spi_2_io,address=0x16000,interruptId=6  \
-  --i2c name=system_i2c_0_io,address=0x18000,interruptId=8  \
-  --i2c name=system_i2c_1_io,address=0x19000,interruptId=9  \
-  --i2c name=system_i2c_2_io,address=0x1A000,interruptId=10  \
-  --interrupt name=userInterruptA,id=25  \
   --ramHex software/standalone/bootloader/build/bootloader.hex  \
-  --cpuCount=4  \
-  --customInstruction
-"
+  --noAxiA \
+  --customInstruction \
+  --withFpu \
+  --cpuCount=1"
 ```
 
 ## Boot sequence
@@ -40,20 +24,20 @@ sbt "runMain saxon.board.efinix.EfxRiscvBmbDdrSoc \
 The boot sequence is done in 4 steps :
 
 * bootloader : In the OnChipRam initialized by the FPGA bitstream
-  * Initialise the DDR3
-  * Copy the openSBI and the u-boot binary from the FPGA SPI flash to the DDR3
+  * Initialise the HyperRAM
+  * Copy the openSBI and the u-boot binary from the FPGA SPI flash to the HyperRAM
   * Jump to the openSBI binary in machine mode
 
-* openSBI : In the DDR3
+* openSBI : In the HyperRAM
   * Initialise the machine mode CSR to support further supervisor SBI call and to emulate some missing CSR
   * Jump to the u-boot binary in supervisor mode
 
-* u-boot : In the DDR3
+* u-boot : In the HyperRAM
   * Wait two seconds for user inputs
   * Read the linux uImage and dtb from the sdcard first partition
   * Boot linux
 
-* Linux : in the DDR3
+* Linux : in the HyperRAM
   * Kernel boot
   * Run Buildroot from the sdcard second partition
 
@@ -62,15 +46,15 @@ The boot sequence is done in 4 steps :
 OnChipRam:
 - 0xF9000000 : bootloader (4 KB)
 
-DDR3:
+HyperRAM:
 - 0x00400000 : Linux kernel
 - 0x00001000 : opensbi
 - 0x00100000 : u-boot
 
 FPGA SPI flash:
 - 0x000000   : FPGA bitstream
-- 0x400000   : opensbi
-- 0x500000   : u-boot
+- 0xF00000   : opensbi
+- 0xF40000   : u-boot
 
 Sdcard :
 - p1:uImage  : Linux kernel
@@ -113,13 +97,13 @@ It will take quite a while to build, good luck and have fun <3
 
 ```
 # Getting this repository
-mkdir T120F576_BB_linux
-cd T120F576_BB_linux
-git clone https://github.com/Dolu1990/SaxonEFX_Soc.git -b dev-0.2 --recursive SaxonEFX_Soc
+mkdir ti60_devkit_linux
+cd ti60_devkit_linux
+git clone https://github.com/Dolu1990/SaxonEFX_Soc.git -b dev-0.3 --recursive SaxonEFX_Soc
 
 # Sourcing the build script
-export SAXON_CPU_COUNT=4
-source SaxonEFX_Soc/bsp/efinix/EfxRiscvBmbDdrSoc/source.sh
+export SAXON_CPU_COUNT=1
+source SaxonEFX_Soc/bsp/efinix/ti60_devkit/source.sh
 
 # Clone opensbi, u-boot, linux, buildroot, openocd
 saxon_clone
@@ -127,9 +111,9 @@ saxon_clone
 # Build the FPGA bitstream
 saxon_standalone_compile bootloader
 saxon_netlist
-cp -f hardware/netlist/EfxRiscvBmbDdrSoc.v hardware/synthesis/efx/T120F576_BB/source
-cp -f hardware/netlist/EfxRiscvBmbDdrSoc.v*.bin hardware/synthesis/efx/T120F576_BB
-! run the hardware/synthesis/efx/T120F576_BB project and programe the board !
+cp -f hardware/netlist/EfxRiscvBmbDdrSoc.v hardware/synthesis/efx/ti60_devkit/source
+cp -f hardware/netlist/EfxRiscvBmbDdrSoc.v*.bin hardware/synthesis/efx/ti60_devkit
+! run the hardware/synthesis/efx/ti60_devkit project and programe the board !
 
 # Build the firmware
 saxon_buildroot
@@ -157,34 +141,13 @@ source SaxonEFX_Soc/bsp/efinix/EfxRiscvBmbDdrSoc/source.sh
 saxon_buildroot_load
 
 # Connecting the USB serial port (assuming you don't have nother ttyUSB pluged)
-saxon_serial
+picocom -b 115200 /dev/ttyUSB2 --imap lfcrlf
 ```
 
 ## Booting with a ramfs with a preloaded sdcard in uboot
 
 ```
 load mmc 0:1 0x00400000 uImage;load mmc 0:1 0x00FF0000 dtb; load mmc 0:1 0x00FFFFC0 rootfs.cpio.uboot;bootm 0x00400000 0x00FFFFC0 0x00FF0000
-```
-
-## Run doom (on the board)
-
-```
-export DISPLAY=:0
-nice --10 chocolate-doom -nosound -4 > /dev/null &
-sleep 15 # Wait long enough for doom to boot
-WID=$(xdotool getwindowfocus)
-xdotool windowmove $WID 0 140
-```
-
-## Run xterm htop (on the board)
-
-```
-export DISPLAY=:0
-date +%T -s "10:13:13" # Need to set a date for htop to run
-xterm -fg white -bg black htop &
-sleep 5 # Wait long enough for doom to boot
-WID=$(xwininfo -tree -root | grep  xterm | awk '{print $1;}')
-xdotool windowmove $WID 0 400
 ```
 
 ## Test AES acceleration
@@ -205,7 +168,6 @@ source SaxonEFX_Soc/bsp/efinix/EfxRiscvBmbDdrSoc/source.sh
 telnet localhost 4444
 targets saxon.cpu0   
 halt
-##KO###flash write_image erase unlock $env(SAXON_ROOT)/SaxonEFX_Soc/hardware/synthesis/efx/ti60_devkit/outflow/hbram_ti60.bit  0xC0000000
 flash write_image erase unlock $env(SAXON_ROOT)/buildroot-build/images/fw_jump.bin  0xC0F00000
 flash write_image erase unlock $env(SAXON_ROOT)/buildroot-build/images/u-boot.bin   0xC0F40000
 ```
@@ -213,7 +175,7 @@ flash write_image erase unlock $env(SAXON_ROOT)/buildroot-build/images/u-boot.bi
 ## Flash the sdcard
 
 ```
-sudo dd if=buildroot-build/images/sdcard.img of=/dev/sdX
+sudo dd if=$SAXON_ROOT/buildroot-build/images/sdcard.img of=/dev/sd???
 ```
 
 ## Boot from sdcard

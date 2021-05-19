@@ -37,7 +37,9 @@ saxon_netlist(){
   --spi name=system_spi_1_io,address=0x15000,interruptId=5  \
   --ramHex software/standalone/bootloader/build/bootloader.hex  \
   --noAxiA \
-  --cpuCount=$SAXON_CPU_COUNT"
+  --customInstruction \
+  --withFpu \
+  --cpuCount=$SAXON_CPU_COUNT \
+  --bsp=bsp/efinix/ti60_devkit"
 }
 
-# --withFpu \

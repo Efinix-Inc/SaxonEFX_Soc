@@ -24,11 +24,8 @@ object BspGenerator {
     val allTags = ArrayBuffer[SpinalTag]()
 //    root.walkComponents(tags ++= _.getTags())
 
-    val bsp = new File("bsp")
-    bsp.mkdir()
-
-    val target = new File(bsp, name)
-    target.mkdir()
+    val target = new File(name)
+    target.mkdirs()
 
     val include = new File(target, "include")
     include.mkdir()

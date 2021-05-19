@@ -395,7 +395,7 @@ object EfxRiscvBmbDdrSoc {
 //    val destination = cpu.reflectBaseType("IBusCachedPlugin_iBusRsp_stages_0_input_payload")
 //    val destination = cpu.reflectBaseType("IBusCachedPlugin_decodeExceptionPort_valid")
 //    println("len : " + LatencyAnalysis(source, destination))
-    BspGenerator("efinix/EfxRiscvBmbDdrSoc", report.toplevel, report.toplevel.system.cores(0).dBus)
+    BspGenerator(report.toplevel.p.bsp, report.toplevel, report.toplevel.system.cores(0).dBus)
   }
 }
 

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<efx:project name="hbram_ti60" description="" last_change_date="Tue May 11 2021 15:35:01" location="/media/data/open/SaxonSoc/efinix/SaxonEFX_Soc/hardware/synthesis/efx/ti60_devkit" sw_version="2021.1EA.112" last_run_state="pass" last_run_tool="efx_pgm" last_run_flow="bitstream" config_result_in_sync="true" design_ood="sync" place_ood="sync" route_ood="sync" xmlns:efx="http://www.efinixinc.com/enf_proj" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.efinixinc.com/enf_proj enf_proj.xsd">
+<efx:project name="hbram_ti60" description="" last_change_date="Wed May 19 2021 10:20:36" location="/media/data/open/SaxonSoc/efinix/SaxonEFX_Soc/hardware/synthesis/efx/ti60_devkit" sw_version="2021.1EA.112" last_run_state="pass" last_run_tool="efx_pgm" last_run_flow="bitstream" config_result_in_sync="true" design_ood="sync" place_ood="sync" route_ood="sync" xmlns:efx="http://www.efinixinc.com/enf_proj" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.efinixinc.com/enf_proj enf_proj.xsd">
     <efx:device_info>
         <efx:family name="Titanium"/>
         <efx:device name="Ti60F225ES"/>
@@ -29,6 +29,7 @@
         <efx:design_file name="top.v" version="default" library="default"/>
         <efx:design_file name="source/memory_checker_start.v" version="default" library="default"/>
         <efx:design_file name="source/EfxRiscvBmbDdrSoc.v" version="default" library="default"/>
+        <efx:design_file name="source/aes_instruction.v" version="default" library="default"/>
         <efx:top_vhdl_arch name=""/>
     </efx:design_info>
     <efx:constraint_info>
@@ -59,7 +60,7 @@
         <efx:param name="load_delaym" value="on" value_type="e_bool"/>
         <efx:param name="optimization_level" value="NULL" value_type="e_option"/>
         <efx:param name="qp_options=anneal_random_seed=" value="1" value_type="e_integer"/>
-        <efx:param name="seed" value="3" value_type="e_integer"/>
+        <efx:param name="seed" value="2" value_type="e_integer"/>
     </efx:place_and_route>
     <efx:bitstream_generation tool_name="efx_pgm">
         <efx:param name="mode" value="active" value_type="e_option"/>

@@ -1,6 +1,8 @@
 RV_M=yes
 RV_C=no
 RV_A=yes
+RV_F=yes
+RV_D=yes
 CFLAGS += -DSMP
 
 CFLAGS += -DSYSTEM_UART_A_APB=SYSTEM_UART_0_IO_APB

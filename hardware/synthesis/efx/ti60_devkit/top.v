@@ -22,9 +22,24 @@
 // ------------------------------------------------------------------------------
 // 1. User requires to manually uncomment SOFT_TAP definition and reassign pin for
 // soft jtag pins
-// 2. User requires to manually edit SDC constraint for io_systemClk
+// 2. User requires to manually edit SDC constraint for clk
 // ------------------------------------------------------------------------------
 `include "hbram_define.v"
+
+
+`define CPU_COUNT 1
+
+`define customInstructionConnect(id) \
+  .cpu``id``_customInstruction_cmd_valid   (cpu_customInstruction_cmd_valid[``id``]), \
+  .cpu``id``_customInstruction_cmd_ready   (cpu_customInstruction_cmd_ready[``id``]), \
+  .cpu``id``_customInstruction_function_id (cpu_customInstruction_function_id[``id``]), \
+  .cpu``id``_customInstruction_inputs_0    (cpu_customInstruction_inputs_0[``id``]), \
+  .cpu``id``_customInstruction_inputs_1    (cpu_customInstruction_inputs_1[``id``]), \
+  .cpu``id``_customInstruction_rsp_valid   (cpu_customInstruction_rsp_valid[``id``]), \
+  .cpu``id``_customInstruction_rsp_ready   (cpu_customInstruction_rsp_ready[``id``]), \
+  .cpu``id``_customInstruction_outputs_0   (cpu_customInstruction_outputs_0[``id``])
+
+
 module top (
     //user custom ports
     output       [3:0]  leds,
@@ -41,6 +56,8 @@ module top (
     output              sdcard_ss,
     output              sdcard_mosi,
     input               sdcard_miso,
+
+    output      [7:0]   pmod,
 
     input               jtag_inst1_TCK,
     input               jtag_inst1_TDI,
@@ -212,6 +229,37 @@ hbram_top #(
 
 
 
+wire             cpu_customInstruction_cmd_valid [0:`CPU_COUNT-1];
+wire             cpu_customInstruction_cmd_ready[0:`CPU_COUNT-1];
+wire    [9:0]    cpu_customInstruction_function_id[0:`CPU_COUNT-1];
+wire    [31:0]   cpu_customInstruction_inputs_0[0:`CPU_COUNT-1];
+wire    [31:0]   cpu_customInstruction_inputs_1[0:`CPU_COUNT-1];
+wire             cpu_customInstruction_rsp_valid[0:`CPU_COUNT-1];
+wire             cpu_customInstruction_rsp_ready[0:`CPU_COUNT-1];
+wire    [31:0]   cpu_customInstruction_outputs_0[0:`CPU_COUNT-1];
+
+
+genvar i;
+generate
+    for (i=0; i<`CPU_COUNT; i=i+1) begin : aes_block // <-- example block name
+      aes_instruction aes_instruction_0 (
+       .clk(clk),
+       .reset(io_systemReset),
+
+       .cmd_valid(cpu_customInstruction_cmd_valid[i]),
+       .cmd_ready(cpu_customInstruction_cmd_ready[i]),
+       .cmd_function_id(cpu_customInstruction_function_id[i]),
+       .cmd_inputs_0(cpu_customInstruction_inputs_0[i]),
+       .cmd_inputs_1(cpu_customInstruction_inputs_1[i]),
+       .rsp_valid(cpu_customInstruction_rsp_valid[i]),
+       .rsp_ready(cpu_customInstruction_rsp_ready[i]),
+       .rsp_outputs_0(cpu_customInstruction_outputs_0[i])
+      );
+end
+endgenerate
+
+
+
 wire          soc_jtagCtrl_tck;
 wire          soc_io_asyncReset;
 wire          soc_io_memoryReset;
@@ -287,7 +335,18 @@ wire [0:0]    soc_system_spi_1_io_data_3_write;
 wire [0:0]    soc_system_spi_1_io_ss;
 
 
+
 EfxRiscvBmbDdrSoc soc (
+
+  `customInstructionConnect(0),
+  //`customInstructionConnect(1),
+  //`customInstructionConnect(2),
+  //`customInstructionConnect(3),
+  //`customInstructionConnect(4),
+  //`customInstructionConnect(5),
+  //`customInstructionConnect(6),
+  //`customInstructionConnect(7),
+
   .jtagCtrl_tck(soc_jtagCtrl_tck),
   .io_systemClk(clk),
   .io_asyncReset(soc_io_asyncReset),
@@ -418,7 +477,14 @@ assign sdcard_mosi = soc_system_spi_1_io_data_0_write;
 assign soc_system_spi_1_io_data_1_read = sdcard_miso;
 
 assign leds[3:0] = {soc_system_gpio_0_io_write[2:0], hbc_cal_pass};
-
+assign pmod[0] = io_arw_valid;
+assign pmod[1] = io_w_valid;
+assign pmod[2] = io_b_valid;
+assign pmod[3] = io_r_valid;
+assign pmod[4] = io_arw_ready;
+assign pmod[5] = io_w_ready;
+assign pmod[6] = io_b_ready;
+assign pmod[7] = io_r_ready;
 
 
 /*

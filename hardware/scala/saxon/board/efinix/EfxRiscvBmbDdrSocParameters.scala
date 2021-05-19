@@ -83,7 +83,8 @@ case class EfxRiscvBmbDdrSocParameter(systemFrequency : HertzNumber,
                                       withFpu : Boolean,
                                       withAxiA : Boolean = true,
                                       withDdrA : Boolean = true,
-                                      linuxReady : Boolean = true)
+                                      linuxReady : Boolean = true,
+                                      bsp : String = null)
 
 object EfxRiscvBmbDdrSocParameter{
   def defaultArgs(args : Seq[String]): EfxRiscvBmbDdrSocParameter ={
@@ -118,6 +119,7 @@ object EfxRiscvBmbDdrSocParameter{
     val rmii = ArrayBuffer[RmiiSpec]()
     val interrupt = ArrayBuffer[InterruptSpec]()
     var withFpu = false
+    var bsp = "bsp/efinix/EfxRiscvBmbDdrSoc"
 
     def decode(str : String) = if(str.contains("0x"))
       BigInt(str.replace("0x",""), 16)
@@ -149,6 +151,7 @@ object EfxRiscvBmbDdrSocParameter{
       opt[String]("onChipRamSize")action { (v, c) => onChipRamSize = decode(v) } text(s"At least 1 KB to host the flash bootloader. Default 0x${onChipRamSize.toString(16)}")
       opt[String]("axiAAddress")action { (v, c) => axiAAddress = decode(v) } text(s"Default 0x${axiAAddress.toString(16)}")
       opt[String]("axiASize")action { (v, c) => axiASize = decode(v) } text(s"Default 0x${axiASize.toString(16)}")
+      opt[String]("bsp")action { (v, c) => bsp = v } text(s"Path to the bsp folder, default ${bsp}")
       opt[Map[String, String]]("interrupt") unbounded() action { (v, c) =>
         interrupt += InterruptSpec(
           id = Integer.decode(v("id")).toInt,
@@ -295,7 +298,8 @@ object EfxRiscvBmbDdrSocParameter{
       withFpu = withFpu,
       withDdrA = withDdrA,
       withAxiA = withAxiA,
-      linuxReady = linuxReady
+      linuxReady = linuxReady,
+      bsp = bsp
     )
 
     config
