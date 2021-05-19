@@ -16,7 +16,8 @@ For the hardware/synthesis/efx/ti60_devkit :
   --noAxiA \
   --customInstruction \
   --withFpu \
-  --cpuCount=1"
+  --cpuCount=1 \
+  --bsp=bsp/efinix/ti60_devkit"
 ```
 
 ## Boot sequence
