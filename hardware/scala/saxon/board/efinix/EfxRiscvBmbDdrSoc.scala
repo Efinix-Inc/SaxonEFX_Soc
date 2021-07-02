@@ -39,7 +39,7 @@ import scala.collection.mutable.ArrayBuffer
 
 
 
-class EfxRiscvBmbSocSystem(p : EfxRiscvBmbDdrSocParameter) extends VexRiscvClusterGenerator(p.cpuCount){
+class EfxRiscvBmbSocSystem(p : EfxRiscvBmbDdrSocParameter) extends VexRiscvClusterGenerator(p.cpuCount, withSupervisor = p.linuxReady){
   val fabric = withDefaultFabric(withOutOfOrderDecoder = false)
   bmbPeripheral.mapping.load(p.apbBridgeMapping)
 
@@ -47,7 +47,7 @@ class EfxRiscvBmbSocSystem(p : EfxRiscvBmbDdrSocParameter) extends VexRiscvClust
     setParameters(extraStage = p.cpuCount > 1)
   }
 
-  val generalDataWidth = if(p.withDdrA || p.cpuCount > 1 || p.withFpu) 64 else 32
+  val generalDataWidth = if(p.cpuCount > 1 || p.withFpu) 64 else 32
   val ramA = BmbOnChipRamGenerator()
 
   val bridge = BmbBridgeGenerator()
@@ -531,7 +531,7 @@ object EfxRiscvAxiDdrSocSystemSim {
 
 //        ddrMemory.loadBin(0x00001000, "software/standalone/timerAndGpioInterruptDemo/build/timerAndGpioInterruptDemo_spinal_sim.bin")
 //        ddrMemory.loadBin(0x00001000, "software/standalone/dhrystone/build/dhrystone.bin")
-//        ddrMemory.loadBin(0x00001000, "software/standalone/freertosDemo/build/freertosDemo_spinal_sim.bin")
+        ddrMemory.loadBin(0x00001000, "software/standalone/freertosDemo/build/freertosDemo_spinal_sim.bin")
 //          ddrMemory.loadBin(0x00001000, "software/standalone/fpu/build/fpu.bin")
       }
 

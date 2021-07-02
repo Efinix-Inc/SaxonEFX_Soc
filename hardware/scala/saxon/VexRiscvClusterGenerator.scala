@@ -14,7 +14,7 @@ import vexriscv.VexRiscvBmbGenerator
 import vexriscv.ip.fpu.{FpuCore, FpuParameter, FpuPort}
 import vexriscv.plugin.{CsrPlugin, FpuPlugin}
 
-class VexRiscvClusterGenerator(cpuCount : Int) extends Area {
+class VexRiscvClusterGenerator(cpuCount : Int, withSupervisor : Boolean = true) extends Area {
   // Define the BMB interconnect utilities
   implicit val interconnect = BmbInterconnectGenerator()
   val bmbPeripheral = BmbBridgeGenerator(mapping = SizeMapping(0x10000000, 16 MiB)).peripheral(dataWidth = 32)
@@ -34,7 +34,7 @@ class VexRiscvClusterGenerator(cpuCount : Int) extends Area {
     vex.setTimerInterrupt(clint.timerInterrupt(cpuId))
     vex.setSoftwareInterrupt(clint.softwareInterrupt(cpuId))
     plic.addTarget(vex.externalInterrupt)
-    plic.addTarget(vex.externalSupervisorInterrupt)
+    if(withSupervisor) plic.addTarget(vex.externalSupervisorInterrupt)
     List(clint.logic, vex.logic).produce{
       for (plugin <- vex.config.plugins) plugin match {
         case plugin : CsrPlugin if plugin.utime != null => plugin.utime := RegNext(clint.logic.io.time)
