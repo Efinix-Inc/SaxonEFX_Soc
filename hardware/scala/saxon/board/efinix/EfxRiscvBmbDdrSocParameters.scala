@@ -84,7 +84,10 @@ case class EfxRiscvBmbDdrSocParameter(systemFrequency : HertzNumber,
                                       withAxiA : Boolean = true,
                                       withDdrA : Boolean = true,
                                       linuxReady : Boolean = true,
-                                      bsp : String = null)
+                                      withAtomic : Boolean = true,
+                                      bsp : String = null){
+  def withCoherency = cpuCount > 1
+}
 
 object EfxRiscvBmbDdrSocParameter{
   def defaultArgs(args : Seq[String]): EfxRiscvBmbDdrSocParameter ={
@@ -94,6 +97,7 @@ object EfxRiscvBmbDdrSocParameter{
     var dCacheWays = 2
     var withAxiA = true
     var withDdrA = true
+    var withAtomic = true
     var onChipRamHexFile = "software/standalone/bootloader/build/bootloader.hex"
     var systemFrequancy = 50000000
     var ddrADataWidth = 128
@@ -130,7 +134,8 @@ object EfxRiscvBmbDdrSocParameter{
       help("help").text("prints this usage text")
       opt[String]("ramHex")  action { (v, c) => onChipRamHexFile = v } text(s"Set the main memory boot content with an hex file. Default $onChipRamHexFile")
       opt[Unit]("customInstruction")action { (v, c) => customInstruction = true } text(s"Add custom instruction interface. Default $customInstruction")
-      opt[Unit]("noLinux")action { (v, c) => linuxReady = false } text(s"Default $linuxReady")
+      opt[Unit]("noLinux")action { (v, c) => linuxReady = false } text(s"Default ${!linuxReady}")
+      opt[Unit]("noAtomic")action { (v, c) => withAtomic = false } text(s"Default ${!withAtomic}")
       opt[Unit]("noDdrA")action { (v, c) => withDdrA = false } text(s"Turn off ddrA")
       opt[Unit]("noAxiA")action { (v, c) => withAxiA = false } text(s"Turn off axiA")
       opt[Unit]("withFpu")action { (v, c) => withFpu = true } text(s"Turn on the FPU generation")
@@ -299,6 +304,7 @@ object EfxRiscvBmbDdrSocParameter{
       withDdrA = withDdrA,
       withAxiA = withAxiA,
       linuxReady = linuxReady,
+      withAtomic = withAtomic,
       bsp = bsp
     )
 

@@ -40,7 +40,7 @@ import scala.collection.mutable.ArrayBuffer
 
 
 class EfxRiscvBmbSocSystem(p : EfxRiscvBmbDdrSocParameter) extends VexRiscvClusterGenerator(p.cpuCount, withSupervisor = p.linuxReady){
-  val fabric = withDefaultFabric(withOutOfOrderDecoder = false)
+  val fabric = withDefaultFabric(withOutOfOrderDecoder = false, withInvalidation = p.withCoherency)
   bmbPeripheral.mapping.load(p.apbBridgeMapping)
 
   val fpu = p.withFpu generate new FpuIntegration(){
@@ -99,6 +99,8 @@ class EfxRiscvAxiDdrSocSystemWithArgs(p : EfxRiscvBmbDdrSocParameter) extends Ef
       externalFpu = p.withFpu,
       withMmu = p.linuxReady,
       withSupervisor = p.linuxReady,
+      atomic = p.withAtomic,
+      coherency = p.cpuCount != 1,
       regfileRead = vexriscv.plugin.SYNC
     ))
 
@@ -272,10 +274,12 @@ class EfxRiscvAxiDdrSocSystemWithArgs(p : EfxRiscvBmbDdrSocParameter) extends Ef
   interconnect.setPipelining(ramA.ctrl)(rspValid = true)
   // Add some interconnect pipelining to improve FMax
   interconnect.setPipelining(bridge.bmb)(cmdValid = true, cmdReady = true)
-  for(cpu <- cores) interconnect.setPipelining(cpu.dBus)(cmdValid = true, invValid = true, ackValid = true, syncValid = true)
+  for(cpu <- cores) interconnect.setPipelining(cpu.dBus)(cmdValid = true, invValid = p.withCoherency, ackValid = p.withCoherency, syncValid = p.withCoherency)
   interconnect.setPipelining(fabric.exclusiveMonitor.input)(cmdValid = true, cmdReady = true, rspValid = true)
-  interconnect.setPipelining(fabric.invalidationMonitor.input)(invReady = true, ackValid =  true)
-  interconnect.setPipelining(fabric.invalidationMonitor.output)(cmdValid = true, cmdReady = true, rspValid = true)
+  if(p.withCoherency) {
+    interconnect.setPipelining(fabric.invalidationMonitor.input)(invReady = true, ackValid = true)
+    interconnect.setPipelining(fabric.invalidationMonitor.output)(cmdValid = true, cmdReady = true, rspValid = true)
+  }
   interconnect.setPipelining(bmbPeripheral.bmb)(cmdHalfRate = true, rspHalfRate = true)
   p.withDdrA generate interconnect.setPipelining(ddr.bmb)(cmdValid = true, cmdReady = true, rspValid = true)
   p.withAxiA generate interconnect.setPipelining(axiA.bmb)(cmdValid = true, cmdReady = true, rspValid = true, rspReady = true)
@@ -531,7 +535,7 @@ object EfxRiscvAxiDdrSocSystemSim {
 
 //        ddrMemory.loadBin(0x00001000, "software/standalone/timerAndGpioInterruptDemo/build/timerAndGpioInterruptDemo_spinal_sim.bin")
 //        ddrMemory.loadBin(0x00001000, "software/standalone/dhrystone/build/dhrystone.bin")
-        ddrMemory.loadBin(0x00001000, "software/standalone/freertosDemo/build/freertosDemo_spinal_sim.bin")
+//        ddrMemory.loadBin(0x00001000, "software/standalone/freertosDemo/build/freertosDemo_spinal_sim.bin")
 //          ddrMemory.loadBin(0x00001000, "software/standalone/fpu/build/fpu.bin")
       }
 
