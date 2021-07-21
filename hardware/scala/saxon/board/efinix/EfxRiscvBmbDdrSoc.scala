@@ -94,6 +94,7 @@ class EfxRiscvAxiDdrSocSystemWithArgs(p : EfxRiscvBmbDdrSocParameter) extends Ef
       dCacheWays = p.dCacheWays,
       dBusCmdMasterPipe = true,
       injectorStage = true,
+      earlyShifterInjection = false,
       withFloat = p.withFpu,
       withDouble = p.withFpu,
       externalFpu = p.withFpu,
@@ -135,6 +136,7 @@ class EfxRiscvAxiDdrSocSystemWithArgs(p : EfxRiscvBmbDdrSocParameter) extends Ef
     g.parameter.load(spec.config)
     g.connectInterrupt(plic, spec.interruptId)
     g.uart.setName(spec.name)
+    interconnect.setPipelining(g.ctrl)(cmdHalfRate = true, rspHalfRate = true)
     g
   }
 
@@ -155,6 +157,7 @@ class EfxRiscvAxiDdrSocSystemWithArgs(p : EfxRiscvBmbDdrSocParameter) extends Ef
     g.parameter.load(spec.config)
     g.connectInterrupt(plic, spec.interruptId)
     g.i2c.setName(spec.name)
+    interconnect.setPipelining(g.ctrl)(cmdHalfRate = true)
     g
   }
 
@@ -280,7 +283,7 @@ class EfxRiscvAxiDdrSocSystemWithArgs(p : EfxRiscvBmbDdrSocParameter) extends Ef
     interconnect.setPipelining(fabric.invalidationMonitor.input)(invReady = true, ackValid = true)
     interconnect.setPipelining(fabric.invalidationMonitor.output)(cmdValid = true, cmdReady = true, rspValid = true)
   }
-  interconnect.setPipelining(bmbPeripheral.bmb)(cmdHalfRate = true, rspHalfRate = true)
+  interconnect.setPipelining(bmbPeripheral.bmb)(cmdHalfRate = false, rspHalfRate = true)
   p.withDdrA generate interconnect.setPipelining(ddr.bmb)(cmdValid = true, cmdReady = true, rspValid = true)
   p.withAxiA generate interconnect.setPipelining(axiA.bmb)(cmdValid = true, cmdReady = true, rspValid = true, rspReady = true)
   interconnect.setPipelining(fabric.iBus.bmb)(cmdValid = true)
@@ -535,7 +538,7 @@ object EfxRiscvAxiDdrSocSystemSim {
 
 //        ddrMemory.loadBin(0x00001000, "software/standalone/timerAndGpioInterruptDemo/build/timerAndGpioInterruptDemo_spinal_sim.bin")
 //        ddrMemory.loadBin(0x00001000, "software/standalone/dhrystone/build/dhrystone.bin")
-//        ddrMemory.loadBin(0x00001000, "software/standalone/freertosDemo/build/freertosDemo_spinal_sim.bin")
+        ddrMemory.loadBin(0x00001000, "software/standalone/freertosDemo/build/freertosDemo_spinal_sim.bin")
 //          ddrMemory.loadBin(0x00001000, "software/standalone/fpu/build/fpu.bin")
       }
 
