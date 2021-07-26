@@ -382,11 +382,11 @@ object EfxRiscvBmbDdrSoc {
         if (p.withDdrA) {
           toplevel.ddrCd.inputClockDomain.clock.setName("io_memoryClk")
           toplevel.system.ddr.ddrLogic.io.setName("io")
+          toplevel.io_memoryReset.get.setName("io_memoryReset")
         }
 
         toplevel.io_systemReset.get.setName("io_systemReset")
         if (p.withAxiA) {
-          toplevel.io_memoryReset.get.setName("io_memoryReset")
           toplevel.system.axiA.interrupt.get.setName("io_axiAInterrupt")
         }
       }
