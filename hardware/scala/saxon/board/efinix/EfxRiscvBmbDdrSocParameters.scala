@@ -86,7 +86,7 @@ case class EfxRiscvBmbDdrSocParameter(systemFrequency : HertzNumber,
                                       linuxReady : Boolean = true,
                                       withAtomic : Boolean = true,
                                       bsp : String = null){
-  def withCoherency = cpuCount > 1
+  def withCoherency = cpuCount > 1 || linuxReady
 }
 
 object EfxRiscvBmbDdrSocParameter{

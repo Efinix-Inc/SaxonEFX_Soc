@@ -101,7 +101,7 @@ class EfxRiscvAxiDdrSocSystemWithArgs(p : EfxRiscvBmbDdrSocParameter) extends Ef
       withMmu = p.linuxReady,
       withSupervisor = p.linuxReady,
       atomic = p.withAtomic,
-      coherency = p.cpuCount != 1,
+      coherency = p.withCoherency,
       regfileRead = vexriscv.plugin.SYNC
     ))
 
