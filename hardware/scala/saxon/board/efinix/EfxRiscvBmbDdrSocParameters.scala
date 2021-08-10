@@ -308,6 +308,7 @@ object EfxRiscvBmbDdrSocParameter{
       bsp = bsp
     )
 
+    assert(!(linuxReady && !withAtomic), "Linux support require atomic, you can turn off linux via --noLinux")
     config
   }
 
