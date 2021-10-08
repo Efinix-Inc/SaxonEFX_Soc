@@ -203,6 +203,14 @@ class EfxRiscvAxiDdrSocSystemWithArgs(p : EfxRiscvBmbDdrSocParameter) extends Ef
     mac.rxCd.load(ClockDomain(rmii_clk))
   }
 
+  val timers = for((spec, i) <- p.timer.zipWithIndex) yield {
+    val g = new EfxTimerGenerator(spec.address)
+    g.setName(spec.name)
+    g.parameter.load(spec.config)
+    g.connectInterrupts(plic, spec.interruptBase)
+    interconnect.setPipelining(g.ctrl)(cmdHalfRate = true)
+    g
+  }
 
   val gpio = for((spec, i) <- p.gpio.zipWithIndex) yield {
     val g = BmbGpioGenerator(spec.address)

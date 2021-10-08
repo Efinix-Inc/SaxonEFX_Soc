@@ -52,6 +52,10 @@ case class InterruptSpec( name : String,
 case class RmiiSpec (     name : String,
                           address : BigInt,
                           interruptId : Int)
+case class TimerSpec (    name : String,
+                          address : BigInt,
+                          interruptBase : Int,
+                          config : EfxTimerCtrlParameter)
 
 
 //Definition of the SoC parameters
@@ -66,6 +70,7 @@ case class EfxRiscvBmbDdrSocParameter(systemFrequency : HertzNumber,
                                       gpio : Seq[GpioSpec],
                                       uart : Seq[UartSpec],
                                       spi : Seq[SpiSpec],
+                                      timer : Seq[TimerSpec],
                                       i2c : Seq[I2cSpec],
                                       rmii : Seq[RmiiSpec],
                                       interrupt : Seq[InterruptSpec] = Nil,
@@ -123,6 +128,7 @@ object EfxRiscvBmbDdrSocParameter{
     val gpio = ArrayBuffer[GpioSpec]()
     val uart = ArrayBuffer[UartSpec]()
     val spi = ArrayBuffer[SpiSpec]()
+    val timer = ArrayBuffer[TimerSpec]()
     val i2c = ArrayBuffer[I2cSpec]()
     val rmii = ArrayBuffer[RmiiSpec]()
     val interrupt = ArrayBuffer[InterruptSpec]()
@@ -231,6 +237,20 @@ object EfxRiscvBmbDdrSocParameter{
         )
       } text (s"Add a new SPI with the given name, address (relative to the apbBridge) and interrupt id,  Ex : --spi name=portName,address=0x123000,interruptId=2")
 
+      opt[Map[String, String]]("timer") unbounded() action { (v, c) =>
+        timer += TimerSpec(
+          address = Integer.decode(v("address")).toInt,
+          name = v("name"),
+          interruptBase = Integer.decode(v("interruptBase")).toInt,
+          config = EfxTimerCtrlParameter(
+            prescalerWidth = Integer.decode(v("prescalerWidth")).toInt,
+            timers = v("counters").split("/").map(e => EfxTimerParameter(
+              width = Integer.decode(e).toInt
+            ))
+          )
+        )
+      } text (s"Add a new timer controller with the given name, address (relative to the apbBridge), and a few parameters Ex : --timer name=timerA,address=0x99000,prescalerWidth=8,interruptBase=16,counters=12/16/32    for a triple timer of 12 bits, 16 bits, 32 bits")
+
 
       opt[Map[String, String]]("i2c") unbounded() action { (v, c) =>
         i2c += I2cSpec(
@@ -306,6 +326,7 @@ object EfxRiscvBmbDdrSocParameter{
       gpio = gpio,
       uart = uart,
       spi = spi,
+      timer = timer,
       withSoftJtag = withSoftJtag,
       i2c = i2c,
       rmii = rmii,
@@ -356,6 +377,7 @@ object EfxRiscvBmbDdrSocParameter{
       gpio = Nil,
       uart = Nil,
       spi = Nil,
+      timer = Nil,
       i2c = Nil,
       rmii = Nil,
       apbSlaves = Nil,
