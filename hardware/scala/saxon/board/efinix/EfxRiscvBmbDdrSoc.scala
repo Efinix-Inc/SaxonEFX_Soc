@@ -40,7 +40,7 @@ import scala.collection.mutable.ArrayBuffer
 
 
 class EfxRiscvBmbSocSystem(p : EfxRiscvBmbDdrSocParameter) extends VexRiscvClusterGenerator(p.cpuCount, withSupervisor = p.linuxReady){
-  val fabric = withDefaultFabric(withOutOfOrderDecoder = false, withInvalidation = p.withCoherency)
+  val fabric = p.withL1D generate withDefaultFabric(withOutOfOrderDecoder = false, withInvalidation = p.withCoherency)
   bmbPeripheral.mapping.load(p.apbBridgeMapping)
 
   val fpu = p.withFpu generate new FpuIntegration(){
@@ -51,11 +51,26 @@ class EfxRiscvBmbSocSystem(p : EfxRiscvBmbDdrSocParameter) extends VexRiscvClust
   val ramA = BmbOnChipRamGenerator()
 
   val bridge = BmbBridgeGenerator()
-  interconnect.addConnection(
-    fabric.iBus.bmb -> List(bridge.bmb),
-    fabric.dBus.bmb -> List(bridge.bmb),
-    bridge.bmb -> List(ramA.ctrl, peripheralDecoder.bus)
-  )
+
+  p.withL1D match {
+    case true => {
+      interconnect.addConnection(
+        fabric.iBus.bmb -> List(bridge.bmb),
+        fabric.dBus.bmb -> List(bridge.bmb),
+        bridge.bmb -> List(ramA.ctrl, peripheralDecoder.bus)
+      )
+    }
+    case false => {
+      interconnect.setDefaultArbitration(BmbInterconnectGenerator.STATIC_PRIORITY)
+      interconnect.setPriority(cores(0).iBus, 1)
+      interconnect.setPriority(cores(0).dBus, 2)
+      interconnect.addConnection(
+        cores(0).iBus -> List(bridge.bmb),
+        cores(0).dBus -> List(bridge.bmb),
+        bridge.bmb -> List(ramA.ctrl, peripheralDecoder.bus)
+      )
+    }
+  }
 }
 
 class EfxRiscvAxiDdrSocSystemWithArgs(p : EfxRiscvBmbDdrSocParameter) extends EfxRiscvBmbSocSystem(p){
@@ -103,7 +118,9 @@ class EfxRiscvAxiDdrSocSystemWithArgs(p : EfxRiscvBmbDdrSocParameter) extends Ef
       atomic = p.withAtomic,
       coherency = p.withCoherency,
       regfileRead = vexriscv.plugin.SYNC,
-      rvc = p.rvc
+      rvc = p.rvc,
+      withDataCache = p.withL1D,
+      withInstructionCache = p.withL1I
     ))
 
     val mul = cpu.config.get.get(classOf[MulPlugin])
@@ -272,14 +289,11 @@ class EfxRiscvAxiDdrSocSystemWithArgs(p : EfxRiscvBmbDdrSocParameter) extends Ef
     }
   }
 
+
+  // Add some interconnect pipelining to improve FMax
   if(cores.size != 1) {
     interconnect.masters(bridge.bmb).withPerSourceDecoder()
   }
-  interconnect.setPipelining(ramA.ctrl)(rspValid = true)
-  // Add some interconnect pipelining to improve FMax
-  interconnect.setPipelining(bridge.bmb)(cmdValid = true, cmdReady = true)
-  for(cpu <- cores) interconnect.setPipelining(cpu.dBus)(cmdValid = true, invValid = p.withCoherency, ackValid = p.withCoherency, syncValid = p.withCoherency)
-  interconnect.setPipelining(fabric.exclusiveMonitor.input)(cmdValid = true, cmdReady = true, rspValid = true)
   if(p.withCoherency) {
     interconnect.setPipelining(fabric.invalidationMonitor.input)(invReady = true, ackValid = true)
     interconnect.setPipelining(fabric.invalidationMonitor.output)(cmdValid = true, cmdReady = true, rspValid = true)
@@ -287,13 +301,24 @@ class EfxRiscvAxiDdrSocSystemWithArgs(p : EfxRiscvBmbDdrSocParameter) extends Ef
   interconnect.setPipelining(bmbPeripheral.bmb)(cmdHalfRate = false, rspHalfRate = true)
   p.withDdrA generate interconnect.setPipelining(ddr.bmb)(cmdValid = true, cmdReady = true, rspValid = true)
   p.withAxiA generate interconnect.setPipelining(axiA.bmb)(cmdValid = true, cmdReady = true, rspValid = true, rspReady = true)
-  interconnect.setPipelining(fabric.iBus.bmb)(cmdValid = true)
-  for(cpu <- cores) interconnect.setPipelining(cpu.iBus)(rspValid = true)
+  p.withL1D match {
+    case true => {
+      for(cpu <- cores) interconnect.setPipelining(cpu.dBus)(cmdValid = true, invValid = p.withCoherency, ackValid = p.withCoherency, syncValid = p.withCoherency)
+      for(cpu <- cores) interconnect.setPipelining(cpu.iBus)(rspValid = true)
+      interconnect.setPipelining(bridge.bmb)(cmdValid = true, cmdReady = true)
+      interconnect.setPipelining(fabric.iBus.bmb)(cmdValid = true)
+      interconnect.setPipelining(fabric.exclusiveMonitor.input)(cmdValid = true, cmdReady = true, rspValid = true)
+      interconnect.setPipelining(ramA.ctrl)(rspValid = true)
+    }
+    case false => {
+      interconnect.setPipelining(cores(0).dBus)(cmdValid = true, cmdReady = true)
+      interconnect.setPipelining(cores(0).iBus)(cmdValid = true, cmdReady = true)
+    }
+  }
+
+
 
   def pipelinedCd() = Handle(ClockDomain.current.copy(reset = ClockDomain.current(KeepAttribute(RegNext(ClockDomain.current.readResetWire)))))
-//  for(cpu <- cores) cpu.onClockDomain(pipelinedCd()) //TODO bring me back
-//  if(p.withDdrA) ddr.onClockDomain(pipelinedCd())
-//  i2c.foreach(_.onClockDomain(pipelinedCd()))
 }
 
 class EfxRiscvBmbDdrSoc(val p : EfxRiscvBmbDdrSocParameter) extends Component{
@@ -545,7 +570,7 @@ object EfxRiscvAxiDdrSocSystemSim {
 
       fork{
         val at = 0
-        val duration = 2
+        val duration = 20
         while(simTime() < at*1000000000l) {
           disableSimWave()
           sleep(100000 * 10000)

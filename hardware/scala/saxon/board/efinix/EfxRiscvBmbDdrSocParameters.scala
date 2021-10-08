@@ -87,7 +87,9 @@ case class EfxRiscvBmbDdrSocParameter(systemFrequency : HertzNumber,
                                       withAtomic : Boolean = true,
                                       bsp : String = null,
                                       resetVector : Long = 0xF9000000L,
-                                      rvc : Boolean = false){
+                                      rvc : Boolean = false,
+                                      withL1D : Boolean = true,
+                                      withL1I : Boolean = true){
   def withCoherency = cpuCount > 1 || linuxReady
 }
 
@@ -128,6 +130,8 @@ object EfxRiscvBmbDdrSocParameter{
     var bsp = "bsp/efinix/EfxRiscvBmbDdrSoc"
     var resetVector = 0xF9000000L
     var rvc = false
+    var withL1D = true
+    var withL1I = true
 
     def decode(str : String) = if(str.contains("0x"))
       BigInt(str.replace("0x",""), 16)
@@ -162,7 +166,9 @@ object EfxRiscvBmbDdrSocParameter{
       opt[String]("axiASize")action { (v, c) => axiASize = decode(v) } text(s"Default 0x${axiASize.toString(16)}")
       opt[String]("bsp")action { (v, c) => bsp = v } text(s"Path to the bsp folder, default ${bsp}")
       opt[Long]("resetVector")action { (v, c) => resetVector = v } text(s"Address at which the CPU program counter is set during reset. default ${resetVector}")
-      opt[Unit]("rvc")action { (v, c) => rvc = true } text(s"Enable RISC-V compressed instructions}")
+      opt[Unit]("rvc")action { (v, c) => rvc = true } text(s"Enable RISC-V compressed instructions")
+      opt[Unit]("noL1I")action { (v, c) => withL1I = false } text(s"Disable CPU instruction caches")
+      opt[Unit]("noL1D")action { (v, c) => withL1D = false } text(s"Disable CPU data caches")
       opt[Map[String, String]]("interrupt") unbounded() action { (v, c) =>
         interrupt += InterruptSpec(
           id = Integer.decode(v("id")).toInt,
@@ -313,7 +319,9 @@ object EfxRiscvBmbDdrSocParameter{
       withAtomic = withAtomic,
       bsp = bsp,
       resetVector = resetVector,
-      rvc = rvc
+      rvc = rvc,
+      withL1D = withL1D,
+      withL1I = withL1I
     )
 
     assert(!(linuxReady && !withAtomic), "Linux support require atomic, you can turn off linux via --noLinux")
