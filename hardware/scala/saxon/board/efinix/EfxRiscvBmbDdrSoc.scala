@@ -84,7 +84,7 @@ class EfxRiscvAxiDdrSocSystemWithArgs(p : EfxRiscvBmbDdrSocParameter) extends Ef
     cpu.config.load(VexRiscvSmpClusterGen.vexRiscvConfig( //TODO
       hartId = coreId,
       ioRange =address => p.apbBridgeMapping.hit(address) || p.axiAMapping.hit(address), //_ (31 downto 28) === 0xF,
-      resetVector = 0xF9000000L,
+      resetVector = p.resetVector,
       iBusWidth = generalDataWidth,
       dBusWidth = generalDataWidth,
       loadStoreWidth = if (p.withFpu) 64 else 32,
@@ -102,7 +102,8 @@ class EfxRiscvAxiDdrSocSystemWithArgs(p : EfxRiscvBmbDdrSocParameter) extends Ef
       withSupervisor = p.linuxReady,
       atomic = p.withAtomic,
       coherency = p.withCoherency,
-      regfileRead = vexriscv.plugin.SYNC
+      regfileRead = vexriscv.plugin.SYNC,
+      rvc = p.rvc
     ))
 
     val mul = cpu.config.get.get(classOf[MulPlugin])

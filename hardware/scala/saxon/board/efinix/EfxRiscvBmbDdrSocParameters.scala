@@ -85,7 +85,9 @@ case class EfxRiscvBmbDdrSocParameter(systemFrequency : HertzNumber,
                                       withDdrA : Boolean = true,
                                       linuxReady : Boolean = true,
                                       withAtomic : Boolean = true,
-                                      bsp : String = null){
+                                      bsp : String = null,
+                                      resetVector : Long = 0xF9000000L,
+                                      rvc : Boolean = false){
   def withCoherency = cpuCount > 1 || linuxReady
 }
 
@@ -124,6 +126,8 @@ object EfxRiscvBmbDdrSocParameter{
     val interrupt = ArrayBuffer[InterruptSpec]()
     var withFpu = false
     var bsp = "bsp/efinix/EfxRiscvBmbDdrSoc"
+    var resetVector = 0xF9000000L
+    var rvc = false
 
     def decode(str : String) = if(str.contains("0x"))
       BigInt(str.replace("0x",""), 16)
@@ -157,6 +161,8 @@ object EfxRiscvBmbDdrSocParameter{
       opt[String]("axiAAddress")action { (v, c) => axiAAddress = decode(v) } text(s"Default 0x${axiAAddress.toString(16)}")
       opt[String]("axiASize")action { (v, c) => axiASize = decode(v) } text(s"Default 0x${axiASize.toString(16)}")
       opt[String]("bsp")action { (v, c) => bsp = v } text(s"Path to the bsp folder, default ${bsp}")
+      opt[Long]("resetVector")action { (v, c) => resetVector = v } text(s"Address at which the CPU program counter is set during reset. default ${resetVector}")
+      opt[Unit]("rvc")action { (v, c) => rvc = true } text(s"Enable RISC-V compressed instructions}")
       opt[Map[String, String]]("interrupt") unbounded() action { (v, c) =>
         interrupt += InterruptSpec(
           id = Integer.decode(v("id")).toInt,
@@ -305,7 +311,9 @@ object EfxRiscvBmbDdrSocParameter{
       withAxiA = withAxiA,
       linuxReady = linuxReady,
       withAtomic = withAtomic,
-      bsp = bsp
+      bsp = bsp,
+      resetVector = resetVector,
+      rvc = rvc
     )
 
     assert(!(linuxReady && !withAtomic), "Linux support require atomic, you can turn off linux via --noLinux")
