@@ -244,7 +244,7 @@ object EfxRiscvBmbDdrSocParameter{
           interruptBase = Integer.decode(v("interruptBase")).toInt,
           config = EfxTimerCtrlParameter(
             prescalerWidth = Integer.decode(v("prescalerWidth")).toInt,
-            timers = v("counters").split("/").map(e => EfxTimerParameter(
+            timers = v("countersWidth").split("/").map(e => EfxTimerParameter(
               width = Integer.decode(e).toInt
             ))
           )
