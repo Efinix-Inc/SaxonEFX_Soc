@@ -13,10 +13,15 @@
 void main() {
     bsp_init();
 
+    char *ptr = "Hello !\n";
+    while(*ptr){
+        uart_write(BSP_UART_TERMINAL, *ptr++);
+    }
+
     gpio_setOutputEnable(BSP_LED_GPIO, BSP_LED_MASK);
     gpio_setOutput(BSP_LED_GPIO, 0x00000000);
 
-    uart_write(BSP_UART_TERMINAL, '!');
+
     while(1){
         gpio_setOutput(BSP_LED_GPIO, gpio_getOutput(BSP_LED_GPIO) ^ BSP_LED_MASK);
 
