@@ -1,0 +1,66 @@
+[*]
+[*] GTKWave Analyzer v3.3.104 (w)1999-2020 BSI
+[*] Wed Oct 13 13:52:24 2021
+[*]
+[dumpfile] "/media/data/open/SaxonSoc/efinix/SaxonEFX_Soc/hardware/synthesis/efx/T120F576_BB_cacheless/la0_waveform.vcd"
+[dumpfile_mtime] "Wed Oct 13 13:52:11 2021"
+[dumpfile_size] 192557
+[savefile] "/media/data/open/SaxonSoc/efinix/SaxonEFX_Soc/hardware/synthesis/efx/T120F576_BB_cacheless/la0_waveform.gtkw"
+[timestart] 914
+[size] 2450 1415
+[pos] -1 -1
+*-1.000000 919 1024 3072 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[sst_width] 212
+[signals_width] 923
+[sst_expanded] 1
+[sst_vpaned_height] 432
+@22
+top.RubySoc_inst/system_cores_0_logic_cpu/dBus_cmd_payload_address[31:0]
+top.RubySoc_inst/system_cores_0_logic_cpu/dBus_cmd_payload_data[31:0]
+@28
+top.RubySoc_inst/system_cores_0_logic_cpu/dBus_cmd_payload_size[1:0]
+top.RubySoc_inst/system_cores_0_logic_cpu/dBus_cmd_payload_wr
+top.RubySoc_inst/system_cores_0_logic_cpu/dBus_cmd_ready
+top.RubySoc_inst/system_cores_0_logic_cpu/dBus_cmd_valid
+@22
+top.RubySoc_inst/system_cores_0_logic_cpu/dBus_rsp_data[31:0]
+@28
+top.RubySoc_inst/system_cores_0_logic_cpu/dBus_rsp_error
+top.RubySoc_inst/system_cores_0_logic_cpu/dBus_rsp_ready
+[color] 1
+top.RubySoc_inst/system_cores_0_logic_cpu/iBus_cmd_valid
+top.RubySoc_inst/system_cores_0_logic_cpu/iBus_cmd_ready
+@22
+top.RubySoc_inst/system_cores_0_logic_cpu/iBus_cmd_payload_pc[31:0]
+@28
+top.RubySoc_inst/system_cores_0_logic_cpu/iBus_rsp_payload_error
+[color] 2
+top.RubySoc_inst/system_cores_0_logic_cpu/iBus_rsp_valid
+@22
+top.RubySoc_inst/system_cores_0_logic_cpu/iBus_rsp_payload_inst[31:0]
+@28
+[color] 1
+top.RubySoc_inst/system_cores_0_logic_cpu/lastStageIsFiring
+@22
+top.RubySoc_inst/system_cores_0_logic_cpu/lastStagePc[31:0]
+top.RubySoc_inst/system_cores_0_logic_cpu/lastStageInstruction[31:0]
+@28
+top.RubySoc_inst/system_cores_0_logic_cpu/IBusSimplePlugin_rspJoin_rspBuffer_c/empty
+top.RubySoc_inst/system_cores_0_logic_cpu/IBusSimplePlugin_rspJoin_rspBuffer_c/full
+top.RubySoc_inst/system_cores_0_logic_cpu/IBusSimplePlugin_rspJoin_rspBuffer_c/io_flush
+@29
+top.RubySoc_inst/system_cores_0_logic_cpu/IBusSimplePlugin_rspJoin_rspBuffer_c/io_occupancy[1:0]
+@28
+[color] 1
+top.RubySoc_inst/system_cores_0_logic_cpu/IBusSimplePlugin_rspJoin_rspBuffer_c/io_push_valid
+top.RubySoc_inst/system_cores_0_logic_cpu/IBusSimplePlugin_rspJoin_rspBuffer_c/io_push_ready
+@22
+top.RubySoc_inst/system_cores_0_logic_cpu/IBusSimplePlugin_rspJoin_rspBuffer_c/io_push_payload_inst[31:0]
+@28
+[color] 1
+top.RubySoc_inst/system_cores_0_logic_cpu/IBusSimplePlugin_rspJoin_rspBuffer_c/io_pop_valid
+top.RubySoc_inst/system_cores_0_logic_cpu/IBusSimplePlugin_rspJoin_rspBuffer_c/io_pop_ready
+@22
+top.RubySoc_inst/system_cores_0_logic_cpu/IBusSimplePlugin_rspJoin_rspBuffer_c/io_pop_payload_inst[31:0]
+[pattern_trace] 1
+[pattern_trace] 0
