@@ -306,7 +306,7 @@ class EfxRiscvAxiDdrSocSystemWithArgs(p : EfxRiscvBmbDdrSocParameter) extends Ef
     interconnect.setPipelining(fabric.invalidationMonitor.input)(invReady = true, ackValid = true)
     interconnect.setPipelining(fabric.invalidationMonitor.output)(cmdValid = true, cmdReady = true, rspValid = true)
   }
-  interconnect.setPipelining(bmbPeripheral.bmb)(cmdHalfRate = false, rspHalfRate = true)
+  interconnect.setPipelining(bmbPeripheral.bmb)(cmdHalfRate = !p.withL1D, rspHalfRate = true)
   p.withDdrA generate interconnect.setPipelining(ddr.bmb)(cmdValid = true, cmdReady = true, rspValid = true)
   p.withAxiA generate interconnect.setPipelining(axiA.bmb)(cmdValid = true, cmdReady = true, rspValid = true, rspReady = true)
   p.withL1D match {
@@ -392,6 +392,7 @@ class EfxRiscvBmbDdrSoc(val p : EfxRiscvBmbDdrSocParameter) extends Component{
       }
     }
   }
+
 }
 
 
@@ -406,7 +407,7 @@ object EfxRiscvBmbDdrSoc {
       ).generateVerilog{
       val p = EfxRiscvBmbDdrSocParameter.defaultArgs(args)
       val toplevel = new EfxRiscvBmbDdrSoc(p){
-        setDefinitionName("EfxRiscvBmbDdrSoc")
+        setDefinitionName(p.toplevelName)
       }
 
       //Match previous version names

@@ -94,7 +94,8 @@ case class EfxRiscvBmbDdrSocParameter(systemFrequency : HertzNumber,
                                       resetVector : Long = 0xF9000000L,
                                       rvc : Boolean = false,
                                       withL1D : Boolean = true,
-                                      withL1I : Boolean = true){
+                                      withL1I : Boolean = true,
+                                      toplevelName : String = "EfxRiscvBmbDdrSoc"){
   def withCoherency = cpuCount > 1 || linuxReady
 }
 
@@ -138,6 +139,7 @@ object EfxRiscvBmbDdrSocParameter{
     var rvc = false
     var withL1D = true
     var withL1I = true
+    var toplevelName = "EfxRiscvBmbDdrSoc"
 
     def decode(str : String) = if(str.contains("0x"))
       BigInt(str.replace("0x",""), 16)
@@ -146,6 +148,7 @@ object EfxRiscvBmbDdrSocParameter{
 
     assert(new scopt.OptionParser[Unit]("EfxRiscvAxiDdrSocGen") {
       help("help").text("prints this usage text")
+      opt[String]("toplevelName")  action { (v, c) => toplevelName = v } text(s"Set the name of the toplevel module. Default $toplevelName")
       opt[String]("ramHex")  action { (v, c) => onChipRamHexFile = v } text(s"Set the main memory boot content with an hex file. Default $onChipRamHexFile")
       opt[Unit]("customInstruction")action { (v, c) => customInstruction = true } text(s"Add custom instruction interface. Default $customInstruction")
       opt[Unit]("noLinux")action { (v, c) => linuxReady = false } text(s"Default ${!linuxReady}")
@@ -342,7 +345,8 @@ object EfxRiscvBmbDdrSocParameter{
       resetVector = resetVector,
       rvc = rvc,
       withL1D = withL1D,
-      withL1I = withL1I
+      withL1I = withL1I,
+      toplevelName = toplevelName
     )
 
     assert(!(linuxReady && !withAtomic), "Linux support require atomic, you can turn off linux via --noLinux")
