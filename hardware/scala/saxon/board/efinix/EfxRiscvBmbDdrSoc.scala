@@ -94,6 +94,12 @@ class EfxRiscvAxiDdrSocSystemWithArgs(p : EfxRiscvBmbDdrSocParameter) extends Ef
   plic.apbOffset.load( BigInt(0xC00000))
   clint.apbOffset.load(BigInt(0xB00000))
 
+  assert(!(p.withL1D && !p.withL1I), "CPU with data cache but without instruction cache isn't supported.")
+  assert(!(p.linuxReady && !p.withL1D), "CPU do not support linux without data cache")
+  assert(!(p.withAtomic && !p.withL1D), "CPU do not support atomic without data cache")
+  assert(!(p.withCoherency && !p.withL1D), "CPU do not support memory coherency without data cache")
+  assert(!(p.cpuCount > 1 && !p.withL1D), "Multicore isn't supported without data cache")
+
   // Configure the CPUs
   for((cpu, coreId) <- cores.zipWithIndex) {
     cpu.config.load(VexRiscvSmpClusterGen.vexRiscvConfig( //TODO
