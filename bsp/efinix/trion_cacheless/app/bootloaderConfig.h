@@ -4,35 +4,42 @@
 #include "io.h"
 #include "spiFlash.h"
 #include "start.h"
-#include "vgaInit.h"
 #include "riscv.h"
 
 #define SPI SYSTEM_SPI_0_IO_CTRL
 #define SPI_CS 0
 
-#define OPENSBI_MEMORY 0x00001000
-#define OPENSBI_FLASH  0xF00000
-#define OPENSBI_SIZE   0x040000
+#define BOOTLOADER_SIZE 1024
+#define RELOCATION_BASE SYSTEM_RAM_A_CTRL+SYSTEM_RAM_A_SIZE-BOOTLOADER_SIZE
 
-#define UBOOT_MEMORY     0x00100000
-#define UBOOT_SBI_FLASH  0xF40000
-#define UBOOT_SIZE       0x0C0000
+#define APP_MEMORY SYSTEM_RAM_A_CTRL
+#define APP_FLASH  0xF00000
+#define APP_SIZE   SYSTEM_RAM_A_SIZE-BOOTLOADER_SIZE
+
 
 void bspMain() {
+    //Relocate the bootloader at the top of the memory
+    if(*((u32*)APP_MEMORY)){
+        bsp_putString("Relocation\n");
+        u8 *src = (u8 *)SYSTEM_RAM_A_CTRL;
+        u8 *dst = (u8 *)RELOCATION_BASE;
+        for(s32 idx = 0;idx < BOOTLOADER_SIZE;idx++){
+            *dst++ = *src++;
+        }
+        *((u32*)APP_MEMORY) = 0;
+
+        void (*relocated)() = (void (*)())RELOCATION_BASE;
+        relocated();
+    }
+
 #ifndef SPINAL_SIM
-    vgaInit();
 	spiFlash_init(SPI, SPI_CS);
 	spiFlash_wake(SPI, SPI_CS);
-    bsp_putString("OpenSBI copy\n");
-    spiFlash_f2m(SPI, SPI_CS, OPENSBI_FLASH, OPENSBI_MEMORY, OPENSBI_SIZE);
-    bsp_putString("U-Boot copy\n");
-    spiFlash_f2m(SPI, SPI_CS, UBOOT_SBI_FLASH, UBOOT_MEMORY, UBOOT_SIZE);
+    bsp_putString("App copy\n");
+    spiFlash_f2m(SPI, SPI_CS, APP_FLASH, APP_MEMORY, APP_SIZE);
 #endif
 
     bsp_putString("Payload boot\n");
-    void (*userMain)(u32, u32, u32) = (void (*)(u32, u32, u32))OPENSBI_MEMORY;
-    #ifdef SMP
-    smp_unlock(userMain);
-    #endif
+    void (*userMain)(u32, u32, u32) = (void (*)(u32, u32, u32))APP_MEMORY;
     userMain(0,0,0);
 }

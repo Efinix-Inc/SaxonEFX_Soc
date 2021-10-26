@@ -508,10 +508,10 @@ object EfxRiscvAxiDdrSocSystemSim {
       if(dut.p.withDdrA) ddrCd.forkStimulus(ddrClkPeriod)
 //      ddrCd.forkSimSpeedPrinter()
 
-      val tcpJtag = JtagTcp(
-        jtag = dut.softJtag.jtag.io,
-        jtagClkPeriod = jtagClkPeriod
-      )
+//      val tcpJtag = JtagTcp(
+//        jtag = dut.softJtag.jtag.io,
+//        jtagClkPeriod = jtagClkPeriod
+//      )
 
       val uartTx = UartDecoder(
         uartPin =  dut.system.uart(0).uart.txd,
@@ -523,7 +523,7 @@ object EfxRiscvAxiDdrSocSystemSim {
         baudPeriod = uartBaudPeriod
       )
 
-      val flash = if(dut.system.spi.size != 0) FlashModel(dut.system.spi(0).io, clockDomain)
+      val flash = (dut.system.spi.size != 0) generate FlashModel(dut.system.spi(0).io, clockDomain)
 
       if(dut.p.withDdrA)fork {
         ddrCd.waitSampling(100)
@@ -583,6 +583,8 @@ object EfxRiscvAxiDdrSocSystemSim {
         ddrMemory.loadBin(0x00001000, "software/standalone/timerExtraDemo/build/timerExtraDemo.bin")
 //          ddrMemory.loadBin(0x00001000, "software/standalone/fpu/build/fpu.bin")
       }
+
+      if(flash != null) flash.loadBinary("software/standalone/blinkAndEcho/build/blinkAndEcho.bin", 0xF00000)
 
       fork{
         val at = 0

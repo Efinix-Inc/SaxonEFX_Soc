@@ -25,8 +25,9 @@ saxon_netlist(){
   --onChipRamSize 0x2000  \
   --gpio name=system_gpio_0_io,address=0x000000,width=16,interrupts=0->12/1->13  \
   --uart name=system_uart_0_io,address=0x10000,interruptId=1  \
+  --spi name=system_spi_0_io,address=0x14000,interruptId=4 \
   --customInstruction \
-  --ramHex software/standalone/blinkAndEcho/build/blinkAndEcho.hex \
+  --ramHex software/standalone/bootloader/build/bootloader.hex \
   --bsp bsp/efinix/trion_cacheless \
   --toplevelName trion_cacheless \
   --noAxiA --noDdrA --noLinux --noAtomic --noL1D --noL1I"
