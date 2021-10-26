@@ -39,7 +39,7 @@ import scala.collection.mutable.ArrayBuffer
 
 
 
-class EfxRiscvBmbSocSystem(p : EfxRiscvBmbDdrSocParameter) extends VexRiscvClusterGenerator(p.cpuCount, withSupervisor = p.linuxReady){
+class EfxRiscvBmbSocSystem(p : EfxRiscvBmbDdrSocParameter, peripheralCd : Handle[ClockDomain]) extends VexRiscvClusterGenerator(p.cpuCount, withSupervisor = p.linuxReady, peripheralCd = peripheralCd){
   val fabric = p.withL1D generate withDefaultFabric(withOutOfOrderDecoder = false, withInvalidation = p.withCoherency)
   bmbPeripheral.mapping.load(p.apbBridgeMapping)
 
@@ -73,7 +73,7 @@ class EfxRiscvBmbSocSystem(p : EfxRiscvBmbDdrSocParameter) extends VexRiscvClust
   }
 }
 
-class EfxRiscvAxiDdrSocSystemWithArgs(p : EfxRiscvBmbDdrSocParameter) extends EfxRiscvBmbSocSystem(p){
+class EfxRiscvAxiDdrSocSystemWithArgs(p : EfxRiscvBmbDdrSocParameter, peripheralClock : Handle[ClockDomain]) extends EfxRiscvBmbSocSystem(p, peripheralClock){
   val ddr = p.withDdrA generate TrionDdrGenerator(
     addressWidth = p.ddrA.addressWidth,
     dataWidth = p.ddrA.dataWidth,
@@ -153,6 +153,8 @@ class EfxRiscvAxiDdrSocSystemWithArgs(p : EfxRiscvBmbDdrSocParameter) extends Ef
       )
     )
   }
+
+  val peripheralCdPush = ClockDomain.push(peripheralClock)
 
   val uart = for((spec, i) <- p.uart.zipWithIndex) yield {
     val g = BmbUartGenerator(spec.address)
@@ -241,22 +243,8 @@ class EfxRiscvAxiDdrSocSystemWithArgs(p : EfxRiscvBmbDdrSocParameter) extends Ef
     g
   }
 
-  val customInstruction = p.customInstruction generate new Area {
-    val io = ArrayBuffer[CfuBus]()
-    val loaded = Handle {
-      for ((core, coreId) <- cores.zipWithIndex if core.logic.cpu.serviceExist(classOf[CfuPlugin])) {
-        val cfu = core.logic.cpu.service(classOf[CfuPlugin]).bus
-        val bus = (master(cloneOf(cfu)))
-        bus <> cfu
-        bus.setName(s"cpu${coreId}_customInstruction")
-        bus.cmd.payload.setCompositeName(bus)
-        bus.rsp.payload.setCompositeName(bus)
-        io += bus
-      }
-    }
-  }
-
   val userInterrupts = for(spec <- p.interrupt) yield UserInterrupt(spec, plic)
+
 
   val axiA = p.withAxiA generate new Generator{
 
@@ -303,6 +291,23 @@ class EfxRiscvAxiDdrSocSystemWithArgs(p : EfxRiscvBmbDdrSocParameter) extends Ef
     }
   }
 
+  peripheralCdPush.restore()
+
+  val customInstruction = p.customInstruction generate new Area {
+    val io = ArrayBuffer[CfuBus]()
+    val loaded = Handle {
+      for ((core, coreId) <- cores.zipWithIndex if core.logic.cpu.serviceExist(classOf[CfuPlugin])) {
+        val cfu = core.logic.cpu.service(classOf[CfuPlugin]).bus
+        val bus = (master(cloneOf(cfu)))
+        bus <> cfu
+        bus.setName(s"cpu${coreId}_customInstruction")
+        bus.cmd.payload.setCompositeName(bus)
+        bus.rsp.payload.setCompositeName(bus)
+        io += bus
+      }
+    }
+  }
+
 
   // Add some interconnect pipelining to improve FMax
   if(cores.size != 1) {
@@ -330,6 +335,8 @@ class EfxRiscvAxiDdrSocSystemWithArgs(p : EfxRiscvBmbDdrSocParameter) extends Ef
     }
   }
 
+  interconnect.getConnection(bridge.bmb, bmbPeripheral.bmb).ccByToggle
+
 
 
   def pipelinedCd() = Handle(ClockDomain.current.copy(reset = ClockDomain.current(KeepAttribute(RegNext(ClockDomain.current.readResetWire)))))
@@ -339,7 +346,7 @@ class EfxRiscvBmbDdrSoc(val p : EfxRiscvBmbDdrSocParameter) extends Component{
   val debugCd = ClockDomainResetGenerator()
   debugCd.holdDuration.load(4095)
   debugCd.enablePowerOnReset()
-  debugCd.makeExternal(frequency = FixedFrequency(p.systemFrequency))
+  debugCd.makeExternal(frequency = (!p.withPeripheralClock) generate FixedFrequency(p.systemFrequency))
 
   val ddrCd = p.withDdrA generate ClockDomainResetGenerator()
   if(p.withDdrA) {
@@ -350,15 +357,22 @@ class EfxRiscvBmbDdrSoc(val p : EfxRiscvBmbDdrSocParameter) extends Component{
     )
   }
 
+  val peripheralCd = p.withPeripheralClock generate ClockDomainResetGenerator()
+  if(p.withPeripheralClock) {
+    peripheralCd.holdDuration.load(63)
+    peripheralCd.asyncReset(if (p.withDdrA) ddrCd else debugCd)
+    peripheralCd.makeExternal(frequency = FixedFrequency(p.systemFrequency), withResetPin = false)
+  }
+
   val systemCd = ClockDomainResetGenerator()
   systemCd.holdDuration.load(63)
-  systemCd.asyncReset(if(p.withDdrA) ddrCd else debugCd)
+  systemCd.asyncReset(if(p.withPeripheralClock) peripheralCd else (if(p.withDdrA) ddrCd else debugCd))
   systemCd.setInput(
     debugCd.outputClockDomain,
     omitReset = true
   )
 
-  val system = systemCd.outputClockDomain on new EfxRiscvAxiDdrSocSystemWithArgs(p)
+  val system = systemCd.outputClockDomain on new EfxRiscvAxiDdrSocSystemWithArgs(p, (if(p.withPeripheralClock) peripheralCd else systemCd).outputClockDomain)
 
   if(p.withDdrA) {
     system.ddr.memoryClockDomain.load(ddrCd.outputClockDomain)
@@ -367,6 +381,7 @@ class EfxRiscvBmbDdrSoc(val p : EfxRiscvBmbDdrSocParameter) extends Component{
 
   val io_systemReset = systemCd.outputClockDomain.produce(out(systemCd.outputClockDomain.on(RegNext(systemCd.outputClockDomain.reset))))
   val io_memoryReset = p.withDdrA generate ddrCd.outputClockDomain.produce(out(ddrCd.outputClockDomain.on(RegNext(ddrCd.outputClockDomain.reset))))
+  val io_peripheralReset = p.withPeripheralClock generate peripheralCd.outputClockDomain.produce(out(peripheralCd.outputClockDomain.on(RegNext(peripheralCd.outputClockDomain.reset))))
 
   val hardJtag = !p.withSoftJtag generate new Area {
     val debug = system.withDebugBus(debugCd.outputClockDomain, if(p.withDdrA) ddrCd else systemCd, 0x10B80000).withJtagInstruction()
@@ -426,6 +441,9 @@ object EfxRiscvBmbDdrSoc {
           toplevel.io_memoryReset.get.setName("io_memoryReset")
         }
 
+        if(p.withPeripheralClock) {
+          toplevel.peripheralCd.inputClockDomain.clock.setName("io_peripheralClk")
+        }
         toplevel.io_systemReset.get.setName("io_systemReset")
         if (p.withAxiA) {
           toplevel.system.axiA.interrupt.get.setName("io_axiAInterrupt")
@@ -496,13 +514,15 @@ object EfxRiscvAxiDdrSocSystemSim {
         }
       }
     }.doSimUntilVoid("test", 41){dut =>
-      val systemClkPeriod = (1e12/dut.debugCd.inputClockDomain.frequency.getValue.toDouble).toLong
+      val systemClkHz = if(dut.p.withPeripheralClock) dut.peripheralCd.inputClockDomain.frequency.getValue.toDouble*2.3 else dut.debugCd.inputClockDomain.frequency.getValue.toDouble
+      val systemClkPeriod = (1e12/systemClkHz).toLong
       val ddrClkPeriod = (1e12/100e6).toLong
       val jtagClkPeriod = systemClkPeriod*4
       val uartBaudRate = 115200
       val uartBaudPeriod = (1e12/uartBaudRate).toLong
-
+      if(dut.p.withPeripheralClock) dut.peripheralCd.inputClockDomain.forkStimulus(systemClkPeriod*2.3 toLong)
       val clockDomain = dut.debugCd.inputClockDomain.get
+      val peripheralCd = if(dut.p.withPeripheralClock) dut.peripheralCd.inputClockDomain.get else clockDomain
       clockDomain.forkStimulus(systemClkPeriod)
       val ddrCd = dut.p.withDdrA generate dut.ddrCd.inputClockDomain.get
       if(dut.p.withDdrA) ddrCd.forkStimulus(ddrClkPeriod)
@@ -523,7 +543,7 @@ object EfxRiscvAxiDdrSocSystemSim {
         baudPeriod = uartBaudPeriod
       )
 
-      val flash = (dut.system.spi.size != 0) generate FlashModel(dut.system.spi(0).io, clockDomain)
+      val flash = (dut.system.spi.size != 0) generate FlashModel(dut.system.spi(0).io, peripheralCd)
 
       if(dut.p.withDdrA)fork {
         ddrCd.waitSampling(100)
@@ -584,11 +604,11 @@ object EfxRiscvAxiDdrSocSystemSim {
 //          ddrMemory.loadBin(0x00001000, "software/standalone/fpu/build/fpu.bin")
       }
 
-      if(flash != null) flash.loadBinary("software/standalone/blinkAndEcho/build/blinkAndEcho.bin", 0xF00000)
+      if(flash != null) flash.loadBinary("software/standalone/blinkAndEcho/build/blinkAndEcho_spinal_sim.bin", 0xF00000)
 
       fork{
         val at = 0
-        val duration = 20
+        val duration = 40
         while(simTime() < at*1000000000l) {
           disableSimWave()
           sleep(100000 * 10000)

@@ -95,6 +95,7 @@ case class EfxRiscvBmbDdrSocParameter(systemFrequency : HertzNumber,
                                       rvc : Boolean = false,
                                       withL1D : Boolean = true,
                                       withL1I : Boolean = true,
+                                      withPeripheralClock : Boolean = false,
                                       toplevelName : String = "EfxRiscvBmbDdrSoc"){
   def withCoherency = cpuCount > 1 || linuxReady
 }
@@ -140,6 +141,7 @@ object EfxRiscvBmbDdrSocParameter{
     var withL1D = true
     var withL1I = true
     var toplevelName = "EfxRiscvBmbDdrSoc"
+    var withPeripheralClock = false
 
     def decode(str : String) = if(str.contains("0x"))
       BigInt(str.replace("0x",""), 16)
@@ -162,7 +164,7 @@ object EfxRiscvBmbDdrSocParameter{
       opt[String]("dCacheSize")action { (v, c) => dCacheSize = decode(v).toInt } text(s"At least 32 and multiple of 32. Default $dCacheSize")
       opt[String]("iCacheWays")action { (v, c) => iCacheWays = decode(v).toInt } text(s"At least 1 and power of 2. Default $iCacheWays")
       opt[String]("dCacheWays")action { (v, c) => dCacheWays = decode(v).toInt } text(s"At least 1 and power of 32. Default $dCacheWays")
-      opt[Int]("systemFrequency")action { (v, c) => systemFrequancy = v } text(s"CPU + peripherals frequency (set the UART baudrate at reset). Default $systemFrequancy")
+      opt[Int]("systemFrequency")action { (v, c) => systemFrequancy = v } text(s"Peripherals frequency (set the UART baudrate at reset). Default $systemFrequancy")
       opt[String]("ddrADataWidth")action { (v, c) => ddrADataWidth = decode(v).toInt } text(s"Default $ddrADataWidth")
       opt[String]("uartBaudrate")action { (v, c) => uartBaudrate = decode(v).toInt } text(s"Default $uartBaudrate")
       opt[String]("ddrAAddress")action { (v, c) => ddrAAddress = decode(v) } text(s"Default 0x${ddrAAddress.toString(16)}")
@@ -178,6 +180,7 @@ object EfxRiscvBmbDdrSocParameter{
       opt[Unit]("rvc")action { (v, c) => rvc = true } text(s"Enable RISC-V compressed instructions")
       opt[Unit]("noL1I")action { (v, c) => withL1I = false } text(s"Disable CPU instruction caches")
       opt[Unit]("noL1D")action { (v, c) => withL1D = false } text(s"Disable CPU data caches")
+      opt[Unit]("withPeripheralClock")action { (v, c) => withPeripheralClock = true} text(s"All the peripherals will use a dedicated clock")
       opt[Map[String, String]]("interrupt") unbounded() action { (v, c) =>
         interrupt += InterruptSpec(
           id = Integer.decode(v("id")).toInt,
@@ -346,7 +349,8 @@ object EfxRiscvBmbDdrSocParameter{
       rvc = rvc,
       withL1D = withL1D,
       withL1I = withL1I,
-      toplevelName = toplevelName
+      toplevelName = toplevelName,
+      withPeripheralClock = withPeripheralClock
     )
 
     assert(!(linuxReady && !withAtomic), "Linux support require atomic, you can turn off linux via --noLinux")
