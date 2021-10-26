@@ -346,7 +346,7 @@ class EfxRiscvBmbDdrSoc(val p : EfxRiscvBmbDdrSocParameter) extends Component{
   val debugCd = ClockDomainResetGenerator()
   debugCd.holdDuration.load(4095)
   debugCd.enablePowerOnReset()
-  debugCd.makeExternal(frequency = (!p.withPeripheralClock) generate FixedFrequency(p.systemFrequency))
+  debugCd.makeExternal(frequency = FixedFrequency(p.systemFrequency))
 
   val ddrCd = p.withDdrA generate ClockDomainResetGenerator()
   if(p.withDdrA) {
@@ -361,7 +361,7 @@ class EfxRiscvBmbDdrSoc(val p : EfxRiscvBmbDdrSocParameter) extends Component{
   if(p.withPeripheralClock) {
     peripheralCd.holdDuration.load(63)
     peripheralCd.asyncReset(if (p.withDdrA) ddrCd else debugCd)
-    peripheralCd.makeExternal(frequency = FixedFrequency(p.systemFrequency), withResetPin = false)
+    peripheralCd.makeExternal(frequency = FixedFrequency(p.peripheralFrequancy), withResetPin = false)
   }
 
   val systemCd = ClockDomainResetGenerator()
@@ -514,13 +514,12 @@ object EfxRiscvAxiDdrSocSystemSim {
         }
       }
     }.doSimUntilVoid("test", 41){dut =>
-      val systemClkHz = if(dut.p.withPeripheralClock) dut.peripheralCd.inputClockDomain.frequency.getValue.toDouble*2.3 else dut.debugCd.inputClockDomain.frequency.getValue.toDouble
-      val systemClkPeriod = (1e12/systemClkHz).toLong
+      val systemClkPeriod = (1e12/dut.debugCd.inputClockDomain.frequency.getValue.toDouble).toLong
       val ddrClkPeriod = (1e12/100e6).toLong
       val jtagClkPeriod = systemClkPeriod*4
       val uartBaudRate = 115200
       val uartBaudPeriod = (1e12/uartBaudRate).toLong
-      if(dut.p.withPeripheralClock) dut.peripheralCd.inputClockDomain.forkStimulus(systemClkPeriod*2.3 toLong)
+      if(dut.p.withPeripheralClock) dut.peripheralCd.inputClockDomain.forkStimulus((1e12/dut.peripheralCd.inputClockDomain.frequency.getValue.toDouble).toLong toLong)
       val clockDomain = dut.debugCd.inputClockDomain.get
       val peripheralCd = if(dut.p.withPeripheralClock) dut.peripheralCd.inputClockDomain.get else clockDomain
       clockDomain.forkStimulus(systemClkPeriod)
