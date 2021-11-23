@@ -372,6 +372,8 @@ class EfxRiscvBmbDdrSoc(val p : EfxRiscvBmbDdrSocParameter) extends Component{
     omitReset = true
   )
 
+  val debugResetCd = if(p.withDdrA) ddrCd else if(p.withPeripheralClock) peripheralCd else systemCd
+
   val system = systemCd.outputClockDomain on new EfxRiscvAxiDdrSocSystemWithArgs(p, (if(p.withPeripheralClock) peripheralCd else systemCd).outputClockDomain)
 
   if(p.withDdrA) {
@@ -383,15 +385,16 @@ class EfxRiscvBmbDdrSoc(val p : EfxRiscvBmbDdrSocParameter) extends Component{
   val io_memoryReset = p.withDdrA generate ddrCd.outputClockDomain.produce(out(ddrCd.outputClockDomain.on(RegNext(ddrCd.outputClockDomain.reset))))
   val io_peripheralReset = p.withPeripheralClock generate peripheralCd.outputClockDomain.produce(out(peripheralCd.outputClockDomain.on(RegNext(peripheralCd.outputClockDomain.reset))))
 
+
   val hardJtag = !p.withSoftJtag generate new Area {
-    val debug = system.withDebugBus(debugCd.outputClockDomain, if(p.withDdrA) ddrCd else systemCd, 0x10B80000).withJtagInstruction()
+    val debug = system.withDebugBus(debugCd.outputClockDomain, debugResetCd, 0x10B80000).withJtagInstruction()
     val jtagCtrl = Handle(debug.logic.jtagBridge.io.ctrl.toIo).setName("jtagCtrl")
     val jtagCtrl_tck = in(Bool()) setName("jtagCtrl_tck")
     debug.jtagClockDomain.load(ClockDomain(jtagCtrl_tck))
   }
 
   val softJtag = p.withSoftJtag generate new Area {
-    val debug = system.withDebugBus(debugCd.outputClockDomain, if(p.withDdrA) ddrCd else systemCd, 0x10B80000).withJtagInstruction()
+    val debug = system.withDebugBus(debugCd.outputClockDomain, debugResetCd, 0x10B80000).withJtagInstruction()
     //        system.withoutDebug()
     //        system.cpu.enableJtag(debugCd, ddrCd)
     //        system.cpu.enableJtagInstructionCtrl(debugCd, ddrCd)
