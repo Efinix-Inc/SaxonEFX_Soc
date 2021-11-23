@@ -112,7 +112,7 @@ object EfxRiscvBmbDdrSocParameter{
     var withAtomic = true
     var onChipRamHexFile = "software/standalone/bootloader/build/bootloader.hex"
     var systemFrequancy = 50000000
-    var peripheralFrequancy = 50000000
+    var peripheralFrequancy = -1
     var ddrADataWidth = 128
     var uartBaudrate = 115200
     var ddrMasters = ArrayBuffer[DdrMasterSpec]()
@@ -167,7 +167,7 @@ object EfxRiscvBmbDdrSocParameter{
       opt[String]("iCacheWays")action { (v, c) => iCacheWays = decode(v).toInt } text(s"At least 1 and power of 2. Default $iCacheWays")
       opt[String]("dCacheWays")action { (v, c) => dCacheWays = decode(v).toInt } text(s"At least 1 and power of 32. Default $dCacheWays")
       opt[Int]("systemFrequency")action { (v, c) => systemFrequancy = v } text(s"CPU and peripheral frequency (if no peripheralClock specified) Default $systemFrequancy")
-      opt[Int]("peripheralFrequency")action { (v, c) => peripheralFrequancy = v } text(s"Peripherals frequency (set the UART baudrate at reset). Default $peripheralFrequancy")
+      opt[Int]("peripheralFrequency")action { (v, c) => peripheralFrequancy = v } text(s"Peripherals frequency (set the UART baudrate at reset). Same as systemFrequency by default")
       opt[Unit]("withPeripheralClock")action { (v, c) => withPeripheralClock = true} text(s"All the peripherals will use a dedicated clock. You will have to set peripheralFrequency too")
       opt[String]("ddrADataWidth")action { (v, c) => ddrADataWidth = decode(v).toInt } text(s"Default $ddrADataWidth")
       opt[String]("uartBaudrate")action { (v, c) => uartBaudrate = decode(v).toInt } text(s"Default $uartBaudrate")
@@ -313,6 +313,12 @@ object EfxRiscvBmbDdrSocParameter{
 
     val apbBridgeMapping : SizeMapping = (apbBridgeAddress,apbBridgeSize)
     val axiAMapping      : SizeMapping = (axiAAddress,axiASize)
+
+    if(!withPeripheralClock){
+      peripheralFrequancy = systemFrequancy
+    } else {
+      assert(peripheralFrequancy != -1, "You need the specify the peripheralFrequency")
+    }
 
     val config = EfxRiscvBmbDdrSocParameter.default(
       iCacheSize = iCacheSize,
