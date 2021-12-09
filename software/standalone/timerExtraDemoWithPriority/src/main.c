@@ -97,7 +97,7 @@ void externalInterrupt(){
     while(claim = plic_claim(BSP_PLIC, BSP_PLIC_CPU_0)){
         u32 priority = plic_get_priority(BSP_PLIC, claim);            // Identify which priority level the current claimed interrupt is
         plic_set_threshold(BSP_PLIC, BSP_PLIC_CPU_0, priority);       // Enable only the interrupts which higher priority than the currently claimed one.
-        csr_set(mstatus, MSTATUS_MIE);
+        csr_set(mstatus, MSTATUS_MIE);                                // enable machine external interrupts
         switch(claim){
         case SYSTEM_PLIC_TIMER_INTERRUPTS_0: {
             bsp_putString("0S\n");
@@ -111,7 +111,7 @@ void externalInterrupt(){
         } break;
         default: crash(); break;
         }
-        csr_clear(mstatus, MSTATUS_MIE);
+        csr_clear(mstatus, MSTATUS_MIE);                              // disable machine external interrupts
         plic_set_threshold(BSP_PLIC, BSP_PLIC_CPU_0, threshold); //Restore the original threshold level
         plic_release(BSP_PLIC, BSP_PLIC_CPU_0, claim); //unmask the claimed interrupt
     }
