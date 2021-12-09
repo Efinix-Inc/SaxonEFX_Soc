@@ -111,6 +111,7 @@ void externalInterrupt(){
         } break;
         default: crash(); break;
         }
+        csr_clear(mstatus, MSTATUS_MIE);
         plic_set_threshold(BSP_PLIC, BSP_PLIC_CPU_0, threshold); //Restore the original threshold level
         plic_release(BSP_PLIC, BSP_PLIC_CPU_0, claim); //unmask the claimed interrupt
     }
