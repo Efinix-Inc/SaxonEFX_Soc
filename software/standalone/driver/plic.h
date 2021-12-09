@@ -18,6 +18,10 @@ static void plic_set_priority(u32 plic, u32 gateway, u32 priority){
     write_u32(priority, plic + PLIC_PRIORITY_BASE + gateway*4);
 }
 
+static u32 plic_get_priority(u32 plic, u32 gateway){
+    return read_u32(plic + PLIC_PRIORITY_BASE + gateway*4);
+}
+
 static void plic_set_enable(u32 plic, u32 target,u32 gateway, u32 enable){
     u32 word = plic + PLIC_ENABLE_BASE + target * PLIC_ENABLE_PER_HART + (gateway / 32 * 4);
     u32 mask = 1 << (gateway % 32);
@@ -30,6 +34,11 @@ static void plic_set_enable(u32 plic, u32 target,u32 gateway, u32 enable){
 static void plic_set_threshold(u32 plic, u32 target, u32 threshold){
     write_u32(threshold, plic + PLIC_THRESHOLD_BASE + target*PLIC_CONTEXT_PER_HART);
 }
+
+static u32 plic_get_threshold(u32 plic, u32 target){
+    return read_u32(plic + PLIC_THRESHOLD_BASE + target*PLIC_CONTEXT_PER_HART);
+}
+
 
 static u32 plic_claim(u32 plic, u32 target){
     return read_u32(plic + PLIC_CLAIM_BASE + target*PLIC_CONTEXT_PER_HART);
