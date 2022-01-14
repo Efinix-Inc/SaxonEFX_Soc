@@ -93,10 +93,12 @@ case class EfxRiscvBmbDdrSocParameter(systemFrequency : HertzNumber,
                                       bsp : String = null,
                                       resetVector : Long = 0xF9000000L,
                                       rvc : Boolean = false,
+                                      additionalJtagTapMax : Int = 1,
                                       withL1D : Boolean = true,
                                       withL1I : Boolean = true,
                                       withPeripheralClock : Boolean = false,
                                       peripheralFrequancy : HertzNumber = null,
+                                      tapId : BigInt = 0x00220a79,
                                       toplevelName : String = "EfxRiscvBmbDdrSoc"){
   def withCoherency = cpuCount > 1 || linuxReady
 }
@@ -144,6 +146,7 @@ object EfxRiscvBmbDdrSocParameter{
     var withL1I = true
     var toplevelName = "EfxRiscvBmbDdrSoc"
     var withPeripheralClock = false
+    var additionalJtagTapMax = 0
 
     def decode(str : String) = if(str.contains("0x"))
       BigInt(str.replace("0x",""), 16)
@@ -184,6 +187,7 @@ object EfxRiscvBmbDdrSocParameter{
       opt[Unit]("rvc")action { (v, c) => rvc = true } text(s"Enable RISC-V compressed instructions")
       opt[Unit]("noL1I")action { (v, c) => withL1I = false } text(s"Disable CPU instruction caches")
       opt[Unit]("noL1D")action { (v, c) => withL1D = false } text(s"Disable CPU data caches")
+      opt[Int]("additionalJtagTapMax")action { (v, c) => additionalJtagTapMax = v } text(s"Allow having additional jtag tap on the jtag chain, up to the given number. Default 0")
       opt[Map[String, String]]("interrupt") unbounded() action { (v, c) =>
         interrupt += InterruptSpec(
           id = Integer.decode(v("id")).toInt,
@@ -320,6 +324,7 @@ object EfxRiscvBmbDdrSocParameter{
       assert(peripheralFrequancy != -1, "You need the specify the peripheralFrequency")
     }
 
+    assert(additionalJtagTapMax > 0, "additionalJtagTapMax need to be bigger than 0")
     val config = EfxRiscvBmbDdrSocParameter.default(
       iCacheSize = iCacheSize,
       dCacheSize = dCacheSize,
@@ -359,6 +364,7 @@ object EfxRiscvBmbDdrSocParameter{
       withL1D = withL1D,
       withL1I = withL1I,
       toplevelName = toplevelName,
+      additionalJtagTapMax = additionalJtagTapMax,
       withPeripheralClock = withPeripheralClock,
       peripheralFrequancy = peripheralFrequancy Hz
     )

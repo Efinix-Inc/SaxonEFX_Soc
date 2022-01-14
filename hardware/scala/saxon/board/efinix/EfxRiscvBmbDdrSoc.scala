@@ -387,14 +387,14 @@ class EfxRiscvBmbDdrSoc(val p : EfxRiscvBmbDdrSocParameter) extends Component{
 
 
   val hardJtag = !p.withSoftJtag generate new Area {
-    val debug = system.withDebugBus(debugCd.outputClockDomain, debugResetCd, 0x10B80000).withJtagInstruction()
+    val debug = system.withDebugBus(debugCd.outputClockDomain, debugResetCd, 0x10B80000).withJtagInstruction(p.additionalJtagTapMax)
     val jtagCtrl = Handle(debug.logic.jtagBridge.io.ctrl.toIo).setName("jtagCtrl")
     val jtagCtrl_tck = in(Bool()) setName("jtagCtrl_tck")
     debug.jtagClockDomain.load(ClockDomain(jtagCtrl_tck))
   }
 
   val softJtag = p.withSoftJtag generate new Area {
-    val debug = system.withDebugBus(debugCd.outputClockDomain, debugResetCd, 0x10B80000).withJtagInstruction()
+    val debug = system.withDebugBus(debugCd.outputClockDomain, debugResetCd, 0x10B80000).withJtagInstruction(p.additionalJtagTapMax)
     //        system.withoutDebug()
     //        system.cpu.enableJtag(debugCd, ddrCd)
     //        system.cpu.enableJtagInstructionCtrl(debugCd, ddrCd)
@@ -410,7 +410,7 @@ class EfxRiscvBmbDdrSoc(val p : EfxRiscvBmbDdrSocParameter) extends Component{
       val logic = add task new Area {
         val tap = jtag.clockDomain on new Area {
           val tap = new JtagTap(jtag.io, 4)
-          val idcodeArea = tap.idcode(B"x00220a79")(5)
+          val idcodeArea = tap.idcode(B(p.tapId, 32 bits))(5)
           val wrapper = tap.map(debug.jtagInstruction, instructionId = 8)
         }
       }
@@ -530,10 +530,10 @@ object EfxRiscvAxiDdrSocSystemSim {
       if(dut.p.withDdrA) ddrCd.forkStimulus(ddrClkPeriod)
 //      ddrCd.forkSimSpeedPrinter()
 
-//      val tcpJtag = JtagTcp(
-//        jtag = dut.softJtag.jtag.io,
-//        jtagClkPeriod = jtagClkPeriod
-//      )
+      val tcpJtag = JtagTcp(
+        jtag = dut.softJtag.jtag.io,
+        jtagClkPeriod = jtagClkPeriod
+      )
 
       val uartTx = UartDecoder(
         uartPin =  dut.system.uart(0).uart.txd,
@@ -600,17 +600,17 @@ object EfxRiscvAxiDdrSocSystemSim {
 //        ddrMemory.loadBin(0x00001000, "software/standalone/test/aes/build/aes.bin")
 
 //        ddrMemory.loadBin(0x00001000, "software/standalone/timerAndGpioInterruptDemo/build/timerAndGpioInterruptDemo_spinal_sim.bin")
-//        ddrMemory.loadBin(0x00001000, "software/standalone/dhrystone/build/dhrystone.bin")
+        ddrMemory.loadBin(0x00001000, "software/standalone/dhrystone/build/dhrystone.bin")
 //        ddrMemory.loadBin(0x00001000, "software/standalone/freertosDemo/build/freertosDemo_spinal_sim.bin")
-        ddrMemory.loadBin(0x00001000, "software/standalone/timerExtraDemo/build/timerExtraDemo.bin")
+        ddrMemory.loadBin(0x00001000, "software/standalone/timerExtraDemoWithPriority/build/timerExtraDemoWithPriority_spinal_sim.bin")
 //          ddrMemory.loadBin(0x00001000, "software/standalone/fpu/build/fpu.bin")
       }
 
-      if(flash != null) flash.loadBinary("software/standalone/blinkAndEcho/build/blinkAndEcho_spinal_sim.bin", 0xF00000)
+//      if(flash != null) flash.loadBinary("software/standalone/blinkAndEcho/build/blinkAndEcho_spinal_sim.bin", 0xF00000)
 
       fork{
         val at = 0
-        val duration = 40
+        val duration = 10000
         while(simTime() < at*1000000000l) {
           disableSimWave()
           sleep(100000 * 10000)
@@ -623,7 +623,7 @@ object EfxRiscvAxiDdrSocSystemSim {
         while(true) {
           disableSimWave()
           sleep(100000 * 10000)
-          enableSimWave()
+//          enableSimWave()
           sleep(  100 * 10000)
         }
       }
@@ -657,4 +657,97 @@ case class aes_instruction() extends BlackBox{
   val rsp_outputs_0 = out Bits(32 bits)
 
   mapCurrentClockDomain(clk, reset)
+}
+
+
+object EfxRiscvAxiDdrSocSystemSimJtagChain {
+  import spinal.core.sim._
+
+  def main(args: Array[String]): Unit = {
+
+    val simConfig = SimConfig
+    simConfig.allOptimisation
+    simConfig.withFstWave
+    //    simConfig.withIVerilog
+
+    simConfig.addIncludeDir("../aesVerilog")
+    simConfig.addRtl("../aesVerilog/aes_instruction.v")
+    simConfig.addSimulatorFlag("-Wno-UNSIGNED")
+    simConfig.compile {
+      new Component {
+        def newSoc(tapId : BigInt) ={
+          new EfxRiscvBmbDdrSoc(EfxRiscvBmbDdrSocParameter.defaultArgs(args).copy(tapId = tapId)) {
+            val ddrSim = p.withDdrA generate system.ddr.ddrLogic.produce(new Area {
+              val axi4 = system.ddr.ddrLogic.io.ddrA.setAsDirectionLess.toAxi4()
+              val readOnly = master(axi4.toReadOnly()).setName("ddrA_sim_readOnly")
+              val writeOnly = master(axi4.toWriteOnly()).setName("ddrA_sim_writeOnly")
+              for (u <- system.ddr.ddrLogic.userAdapters) {
+                u.userClk.setAsDirectionLess() := ddrCd.inputClockDomain.clock.pull()
+              }
+            })
+
+            val customInstructionAes = if (p.customInstruction) systemCd.outputClockDomain on Handle {
+              system.customInstruction.loaded.get
+              for (bus <- system.customInstruction.io) {
+                bus.setAsDirectionLess
+                val bb = aes_instruction()
+                bb.setName("aes", weak = true)
+                bb.cmd_valid <> bus.cmd.valid
+                bb.cmd_ready <> bus.cmd.ready
+                bb.cmd_function_id <> bus.cmd.function_id
+                bb.cmd_inputs_0 <> bus.cmd.inputs(0)
+                bb.cmd_inputs_1 <> bus.cmd.inputs(1)
+
+
+                bb.rsp_valid <> bus.rsp.valid
+                bb.rsp_ready <> bus.rsp.ready
+                bb.rsp_outputs_0 <> bus.rsp.outputs(0)
+                bb
+              }
+            }
+          }
+        }
+        val soc0 = newSoc(0x00110a79)
+        val soc1 = newSoc(0x00220a79)
+        val soc2 = newSoc(0x00330a79)
+
+        val cd = ClockDomain.external("main")
+        val patches = Handle(new Area{
+          def patch(soc : EfxRiscvBmbDdrSoc): Unit ={
+            soc.system.spi.foreach(_.io.toIo())
+            soc.system.gpio.foreach(_.gpio.toIo())
+            soc.system.uart.foreach(_.uart.toIo())
+            soc.system.userInterrupts.foreach(_.pin.toIo())
+            soc.debugCd.inputClockDomain.clock := cd.readClockWire
+            soc.debugCd.inputClockDomain.reset := cd.readResetWire
+          }
+
+          patch(soc0)
+          patch(soc1)
+          patch(soc2)
+
+          val jtag = slave(Jtag())
+          soc0.softJtag.jtag.io.tck := jtag.tck
+          soc0.softJtag.jtag.io.tms := jtag.tms
+          soc1.softJtag.jtag.io.tck := jtag.tck
+          soc1.softJtag.jtag.io.tms := jtag.tms
+          soc2.softJtag.jtag.io.tck := jtag.tck
+          soc2.softJtag.jtag.io.tms := jtag.tms
+
+          soc0.softJtag.jtag.io.tdi := jtag.tdi
+          soc1.softJtag.jtag.io.tdi := soc0.softJtag.jtag.io.tdo
+          soc2.softJtag.jtag.io.tdi := soc1.softJtag.jtag.io.tdo
+          jtag.tdo := soc2.softJtag.jtag.io.tdo
+        })
+      }
+    }.doSimUntilVoid("test", 41) { dut =>
+      dut.cd.forkStimulus(10)
+      val tcpJtag = JtagTcp(
+        jtag = dut.patches.jtag,
+        jtagClkPeriod = 200
+      )
+      disableSimWave()
+    }
+
+  }
 }

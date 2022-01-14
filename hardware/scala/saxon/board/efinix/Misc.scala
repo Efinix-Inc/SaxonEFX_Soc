@@ -2,12 +2,14 @@ package saxon.board.efinix
 
 import saxon._
 import spinal.core._
+import spinal.core.fiber.Handle
 import spinal.lib.{BufferCC, slave}
 import spinal.lib.bus.amba4.axi.{Axi4, Axi4Shared, Axi4SharedOnChipRam, Axi4SpecRenamer}
 import spinal.lib.generator._
 
 case class UserInterrupt(spec: InterruptSpec, ctrl : InterruptCtrlGeneratorI) extends Generator{
-  val interrupt = produce(BufferCC(in.Bool().setName(spec.name)))
+  val pin = Handle(in.Bool().setName(spec.name))
+  val interrupt = produce(BufferCC(pin.get))
   ctrl.addInterrupt(interrupt, spec.id)
   setName(spec.name)
 }
