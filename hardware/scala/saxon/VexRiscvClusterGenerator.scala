@@ -90,22 +90,22 @@ class VexRiscvClusterGenerator(cpuCount : Int, withSupervisor : Boolean = true, 
       tap
     }
 
-    def withJtagInstruction() = {
-      val tap = debugCd on JtagInstructionDebuggerGenerator()
+    def withJtagInstruction(headerIgnoreWidth : Int) = {
+      val tap = debugCd on JtagInstructionDebuggerGenerator(headerIgnoreWidth)
       interconnect.addConnection(tap.bmb, ctrl.bmb)
       tap
     }
 
     // For Xilinx series 7 FPGA
-    def withBscane2(userId : Int) = {
-      val tap = debugCd on Bscane2BmbMasterGenerator(userId)
+    def withBscane2(userId : Int, headerIgnoreWidth : Int) = {
+      val tap = debugCd on Bscane2BmbMasterGenerator(userId, headerIgnoreWidth)
       interconnect.addConnection(tap.bmb, ctrl.bmb)
       tap
     }
 
     // For Altera FPGAs
-    def withVJtag() = {
-      val tap = debugCd on VJtag2BmbMasterGenerator()
+    def withVJtag(headerIgnoreWidth : Int) = {
+      val tap = debugCd on VJtag2BmbMasterGenerator(headerIgnoreWidth)
       interconnect.addConnection(tap.bmb, ctrl.bmb)
       tap
     }
