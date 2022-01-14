@@ -323,8 +323,7 @@ object EfxRiscvBmbDdrSocParameter{
     } else {
       assert(peripheralFrequancy != -1, "You need the specify the peripheralFrequency")
     }
-
-    assert(additionalJtagTapMax > 0, "additionalJtagTapMax need to be bigger than 0")
+    
     val config = EfxRiscvBmbDdrSocParameter.default(
       iCacheSize = iCacheSize,
       dCacheSize = dCacheSize,
