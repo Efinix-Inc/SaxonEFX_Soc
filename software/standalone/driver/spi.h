@@ -4,14 +4,17 @@
 #include "type.h"
 #include "io.h"
 
-#define SPI_DATA        0x00
-#define SPI_BUFFER      0x04
-#define SPI_CONFIG      0x08
-#define SPI_INTERRUPT   0x0C
-#define SPI_CLK_DIVIDER 0x20
-#define SPI_SS_SETUP    0x24
-#define SPI_SS_HOLD     0x28
-#define SPI_SS_DISABLE  0x2C
+#define SPI_DATA             0x00
+#define SPI_BUFFER           0x04
+#define SPI_CONFIG           0x08
+#define SPI_INTERRUPT        0x0C
+#define SPI_CLK_DIVIDER      0x20
+#define SPI_SS_SETUP         0x24
+#define SPI_SS_HOLD          0x28
+#define SPI_SS_DISABLE       0x2C
+#define SPI_WRITE_LARGE      0x50
+#define SPI_READ_WRITE_LARGE 0x54
+#define SPI_READ_LARGE       0x58
 
 typedef struct {
     u32 cpol;
@@ -65,6 +68,26 @@ static u8 spi_read(u32 reg){
     while(spi_rspOccupancy(reg) == 0);
     return read_u32(reg + SPI_DATA);
 }
+
+static void spi_write32(u32 reg, u32 data){
+    while(spi_cmdAvailability(reg) == 0);
+    write_u32(data, reg + SPI_WRITE_LARGE);
+}
+
+static u32 spi_writeRead32(u32 reg, u32 data){
+    while(spi_cmdAvailability(reg) == 0);
+    write_u32(data, reg + SPI_READ_WRITE_LARGE);
+    while(spi_rspOccupancy(reg) == 0);
+    return read_u32(reg + SPI_DATA);
+}
+
+static u32 spi_read32(u32 reg){
+    while(spi_cmdAvailability(reg) == 0);
+    write_u32(SPI_CMD_READ, reg + SPI_DATA);
+    while(spi_rspOccupancy(reg) == 0);
+    return read_u32(reg + SPI_READ_LARGE);
+}
+
 
 static void spi_select(u32 reg, u32 slaveId){
     while(spi_cmdAvailability(reg) == 0);
