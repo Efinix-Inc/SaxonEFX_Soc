@@ -78,7 +78,7 @@ static u32 spi_writeRead32(u32 reg, u32 data){
     while(spi_cmdAvailability(reg) == 0);
     write_u32(data, reg + SPI_READ_WRITE_LARGE);
     while(spi_rspOccupancy(reg) == 0);
-    return read_u32(reg + SPI_DATA);
+    return read_u32(reg + SPI_READ_LARGE);
 }
 
 static u32 spi_read32(u32 reg){
