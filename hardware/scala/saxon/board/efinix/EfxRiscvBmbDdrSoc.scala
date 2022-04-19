@@ -232,10 +232,10 @@ class EfxRiscvAxiDdrSocSystemWithArgs(p : EfxRiscvBmbDdrSocParameter, peripheral
   }
 
 
-  val apbSlaves = for((spec, i) <- p.apbSlaves.zipWithIndex) yield {
+  val apbSlaves = for((spec, i) <- p.apbSlaves.zipWithIndex) yield new Area{
     val g = BmbToApb3Generator(mapping = spec.mapping)
     g.setName(spec.name)
-    Handle(g.logic.io.output.toIo.setName(spec.name))
+    val bus = Handle(g.logic.io.output.toIo.setName(spec.name))
     g.apb3Config load Apb3Config(
         addressWidth = log2Up(spec.mapping.size),
         dataWidth = 32
@@ -585,6 +585,10 @@ object EfxRiscvAxiDdrSocSystemSim {
           }
         }
 
+        for(s <- dut.system.apbSlaves){
+          s.bus.PREADY #= true
+          s.bus.PSLVERROR #= false
+        }
 
         val images = "../buildroot-build/images/"
         ddrMemory.loadBin(0x00001000, images + "fw_jump.bin")
@@ -600,9 +604,10 @@ object EfxRiscvAxiDdrSocSystemSim {
 //        ddrMemory.loadBin(0x00001000, "software/standalone/test/aes/build/aes.bin")
 
 //        ddrMemory.loadBin(0x00001000, "software/standalone/timerAndGpioInterruptDemo/build/timerAndGpioInterruptDemo_spinal_sim.bin")
-        ddrMemory.loadBin(0x00001000, "software/standalone/dhrystone/build/dhrystone.bin")
+//        ddrMemory.loadBin(0x00001000, "software/standalone/dhrystone/build/dhrystone.bin")
 //        ddrMemory.loadBin(0x00001000, "software/standalone/freertosDemo/build/freertosDemo_spinal_sim.bin")
-        ddrMemory.loadBin(0x00001000, "software/standalone/timerExtraDemoWithPriority/build/timerExtraDemoWithPriority_spinal_sim.bin")
+        ddrMemory.loadBin(0x00001000, "software/standalone/smpDemo/build/smpDemo.bin")
+//        ddrMemory.loadBin(0x00001000, "software/standalone/timerExtraDemoWithPriority/build/timerExtraDemoWithPriority_spinal_sim.bin")
 //          ddrMemory.loadBin(0x00001000, "software/standalone/fpu/build/fpu.bin")
       }
 
@@ -610,7 +615,7 @@ object EfxRiscvAxiDdrSocSystemSim {
 
       fork{
         val at = 0
-        val duration = 10000
+        val duration = 1
         while(simTime() < at*1000000000l) {
           disableSimWave()
           sleep(100000 * 10000)
@@ -707,9 +712,9 @@ object EfxRiscvAxiDdrSocSystemSimJtagChain {
             }
           }
         }
-        val soc0 = newSoc(0x00110a79)
-        val soc1 = newSoc(0x00220a79)
-        val soc2 = newSoc(0x00330a79)
+        val soc0 = newSoc(tapId = 0x00110a79)
+        val soc1 = newSoc(tapId = 0x00220a79)
+        val soc2 = newSoc(tapId = 0x00330a79)
 
         val cd = ClockDomain.external("main")
         val patches = Handle(new Area{
@@ -726,6 +731,17 @@ object EfxRiscvAxiDdrSocSystemSimJtagChain {
           patch(soc1)
           patch(soc2)
 
+          val resets = out(List(soc0, soc1, soc2).map(_.io_systemReset.get).asBits())
+
+          val tap3 = new Area{
+            val jtag = Jtag()
+            val cd = ClockDomain(jtag.tck)
+            val ctx = cd.push()
+            val tap = new JtagTap(jtag, 4)
+            val idcodeArea = tap.idcode(B(0x00440a79, 32 bits))(5)
+            ctx.restore()
+          }
+
           val jtag = slave(Jtag())
           soc0.softJtag.jtag.io.tck := jtag.tck
           soc0.softJtag.jtag.io.tms := jtag.tms
@@ -733,11 +749,14 @@ object EfxRiscvAxiDdrSocSystemSimJtagChain {
           soc1.softJtag.jtag.io.tms := jtag.tms
           soc2.softJtag.jtag.io.tck := jtag.tck
           soc2.softJtag.jtag.io.tms := jtag.tms
+          tap3.jtag.tck := jtag.tck
+          tap3.jtag.tms := jtag.tms
 
           soc0.softJtag.jtag.io.tdi := jtag.tdi
-          soc1.softJtag.jtag.io.tdi := soc0.softJtag.jtag.io.tdo
-          soc2.softJtag.jtag.io.tdi := soc1.softJtag.jtag.io.tdo
-          jtag.tdo := soc2.softJtag.jtag.io.tdo
+          soc1.softJtag.jtag.io.tdi := False //soc0.softJtag.jtag.io.tdo
+          soc2.softJtag.jtag.io.tdi := False //soc1.softJtag.jtag.io.tdo
+          tap3.jtag.tdi := soc0.softJtag.jtag.io.tdo
+          jtag.tdo := tap3.jtag.tdo
         })
       }
     }.doSimUntilVoid("test", 41) { dut =>
@@ -746,8 +765,28 @@ object EfxRiscvAxiDdrSocSystemSimJtagChain {
         jtag = dut.patches.jtag,
         jtagClkPeriod = 200
       )
+
+      var last = 0
+      dut.cd.onSamplings{
+        var value = dut.patches.resets.toInt
+        if(last != value){
+          println(s"${simTime()} ${value}")
+          last = value
+        }
+      }
       disableSimWave()
     }
 
   }
 }
+
+
+/*
+
+fpga_spinal.cpu0 mww 0xF9000000 0xAAAAAAAA
+fpga_spinal1.cpu0 mww 0xF9000000 0xBBBBBBBB
+fpga_spinal2.cpu0 mww 0xF9000000 0xCCCCCCCC
+fpga_spinal.cpu0 mdw 0xF9000000 16
+fpga_spinal1.cpu0 mdw 0xF9000000 16
+fpga_spinal2.cpu0 mdw 0xF9000000 16
+ */
