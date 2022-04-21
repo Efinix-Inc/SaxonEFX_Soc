@@ -99,8 +99,10 @@ case class EfxRiscvBmbDdrSocParameter(systemFrequency : HertzNumber,
                                       withPeripheralClock : Boolean = false,
                                       peripheralFrequancy : HertzNumber = null,
                                       tapId : BigInt = 0x00220a79,
-                                      toplevelName : String = "EfxRiscvBmbDdrSoc"){
+                                      toplevelName : String = "EfxRiscvBmbDdrSoc",
+                                      withNaxRiscv : Boolean = false){
   def withCoherency = cpuCount > 1 || linuxReady
+  def withVexRiscv = !withNaxRiscv
 }
 
 object EfxRiscvBmbDdrSocParameter{
@@ -147,6 +149,7 @@ object EfxRiscvBmbDdrSocParameter{
     var toplevelName = "EfxRiscvBmbDdrSoc"
     var withPeripheralClock = false
     var additionalJtagTapMax = 0
+    var withNaxRiscv = false
 
     def decode(str : String) = if(str.contains("0x"))
       BigInt(str.replace("0x",""), 16)
@@ -187,6 +190,7 @@ object EfxRiscvBmbDdrSocParameter{
       opt[Unit]("rvc")action { (v, c) => rvc = true } text(s"Enable RISC-V compressed instructions")
       opt[Unit]("noL1I")action { (v, c) => withL1I = false } text(s"Disable CPU instruction caches")
       opt[Unit]("noL1D")action { (v, c) => withL1D = false } text(s"Disable CPU data caches")
+      opt[Unit]("withNaxRiscv")action { (v, c) => withNaxRiscv = true } text(s"Default VexRiscv")
       opt[Int]("additionalJtagTapMax")action { (v, c) => additionalJtagTapMax = v } text(s"Allow having additional jtag tap on the jtag chain, up to the given number. Default 0")
       opt[Map[String, String]]("interrupt") unbounded() action { (v, c) =>
         interrupt += InterruptSpec(
@@ -362,6 +366,7 @@ object EfxRiscvBmbDdrSocParameter{
       rvc = rvc,
       withL1D = withL1D,
       withL1I = withL1I,
+      withNaxRiscv = withNaxRiscv,
       toplevelName = toplevelName,
       additionalJtagTapMax = additionalJtagTapMax,
       withPeripheralClock = withPeripheralClock,
