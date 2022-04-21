@@ -7,3 +7,6 @@
 [submodule "ext/FreeRTOS-mirror"]
 	path = ext/FreeRTOS-mirror
 	url = https://github.com/coldnew/FreeRTOS-mirror.git
+[submodule "ext/NaxRiscv"]
+	path = ext/NaxRiscv
+	url = https://github.com/SpinalHDL/NaxRiscv.git
