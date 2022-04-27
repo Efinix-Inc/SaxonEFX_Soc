@@ -1,5 +1,6 @@
 package saxon.board.efinix
 
+import naxriscv.debug.EmbeddedJtagPlugin
 import saxon._
 import spinal.core._
 import spinal.core.fiber._
@@ -64,7 +65,10 @@ class EfxNaxRiscvCluster(p : EfxRiscvBmbDdrSocParameter,
     cpu.plugins.load(naxriscv.Config.plugins(
       ioRange = address => p.apbBridgeMapping.hit(address) || p.axiAMapping.hit(address),
       fetchRange = address => !(p.apbBridgeMapping.hit(address) || p.axiAMapping.hit(address)),
-      resetVector = p.resetVector
+      resetVector = p.resetVector,
+      withDebug = true,
+      withEmbeddedJtagInstruction = !p.withSoftJtag,
+      withEmbeddedJtagTap = p.withSoftJtag
     ))
   }
 
@@ -72,6 +76,23 @@ class EfxNaxRiscvCluster(p : EfxRiscvBmbDdrSocParameter,
   if(cores.size != 1) {
     interconnect.masters(bridge.bmb).withPerSourceDecoder()
   }
+
+  assert(cores.size == 1)
+  val hardJtag = !p.withSoftJtag generate hardFork(new Area {
+    val p = cores.head.logic.cpu.framework.getService[EmbeddedJtagPlugin]
+    val jtagCtrl_tck = in(Bool()) setName("jtagCtrl_tck")
+    p.debugCd.loadAsync(debugCd.outputClockDomain)
+    p.noTapCd.load(ClockDomain(jtagCtrl_tck))
+    debugResetCd.asyncReset(Handle(p.logic.ndmreset), ResetSensitivity.HIGH)
+    val jtagCtrl = Handle(p.logic.jtagInstruction.toIo).setName("jtagCtrl")
+  })
+
+  val softJtag = p.withSoftJtag generate hardFork(new Area {
+    val p = cores.head.logic.cpu.framework.getService[EmbeddedJtagPlugin]
+    p.debugCd.loadAsync(debugCd.outputClockDomain)
+    debugResetCd.asyncReset(Handle(p.logic.ndmreset), ResetSensitivity.HIGH)
+    val io = p.logic.jtag.toIo.setName("jtag")
+  })
 
   interconnect.setPipelining(bmbPeripheral.bmb)(cmdHalfRate = !p.withL1D, rspHalfRate = true)
 //  for(cpu <- cores) interconnect.setPipelining(cpu.dBus)(cmdValid = true, invValid = p.withCoherency, ackValid = p.withCoherency, syncValid = p.withCoherency)

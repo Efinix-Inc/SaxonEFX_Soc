@@ -402,8 +402,13 @@ object EfxRiscvAxiDdrSocSystemSim {
       if(dut.p.withDdrA) ddrCd.forkStimulus(ddrClkPeriod)
 //      ddrCd.forkSimSpeedPrinter()
 
-      val tcpJtag = if(dut.p.withVexRiscv) JtagTcp(
+      val tcpJtagVex = if(dut.p.withVexRiscv) JtagTcp(
         jtag = dut.system.vexCluster.softJtag.jtag.io,
+        jtagClkPeriod = jtagClkPeriod
+      )
+
+      val tcpJtagNax = if(dut.p.withNaxRiscv) JtagTcp(
+        jtag = dut.system.naxCluster.softJtag.io,
         jtagClkPeriod = jtagClkPeriod
       )
 
