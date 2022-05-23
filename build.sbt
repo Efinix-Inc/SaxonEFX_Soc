@@ -1,4 +1,4 @@
-val spinalVersion = "1.6.5"
+val spinalVersion = "1.7.1-SNAPSHOT"
 
 lazy val root = (project in file(".")).
   settings(
@@ -17,9 +17,10 @@ lazy val root = (project in file(".")).
     name := "SaxonSoc",
     scalaSource in Compile := baseDirectory.value / "hardware" / "scala",
     scalaSource in Test    := baseDirectory.value / "test" / "scala"
-  ).dependsOn(vexRiscv)
+  ).dependsOn(vexRiscv, naxriscv)
 
 lazy val vexRiscv = RootProject(file("ext/VexRiscv"))
+lazy val naxriscv = RootProject(file("ext/NaxRiscv"))
 
 fork := true
 
