@@ -112,7 +112,9 @@ class EfxVexRiscvCluster(p : EfxRiscvBmbDdrSocParameter,
       regfileRead = vexriscv.plugin.SYNC,
       rvc = p.rvc,
       withDataCache = p.withL1D,
-      withInstructionCache = p.withL1I
+      withInstructionCache = p.withL1I,
+      forceMisa = true,
+      forceMscratch = true
     ))
 
     val mul = cpu.config.get.get(classOf[MulPlugin])
@@ -278,6 +280,7 @@ class EfxRiscvBmbDdrSoc(val p : EfxRiscvBmbDdrSocParameter) extends Component{
     ) else ???
 
     if(p.withVexRiscv) vexCluster.setCompositeName(this)
+    if(p.withNaxRiscv) naxCluster.setCompositeName(this)
     peripherals.setCompositeName(this)
   }
 
