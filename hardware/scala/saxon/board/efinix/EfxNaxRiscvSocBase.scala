@@ -1,6 +1,9 @@
 package saxon.board.efinix
 
+import naxriscv.compatibility.{MemReadAsyncToPhasedReadSyncPhaseTag, MultiPortWritesSymplifierTag}
 import naxriscv.debug.EmbeddedJtagPlugin
+import naxriscv.frontend.DispatchPlugin
+import naxriscv.misc.{RegFilePlugin, RobPlugin}
 import saxon._
 import spinal.core._
 import spinal.core.fiber._
@@ -62,14 +65,33 @@ class EfxNaxRiscvCluster(p : EfxRiscvBmbDdrSocParameter,
   // Configure the CPUs
   for((cpu, coreId) <- cores.zipWithIndex) {
     assert(coreId == 0)
-    cpu.plugins.load(naxriscv.Config.plugins(
+
+    val plugins = naxriscv.Config.plugins(
       ioRange = address => p.apbBridgeMapping.hit(address) || p.axiAMapping.hit(address),
       fetchRange = address => !(p.apbBridgeMapping.hit(address) || p.axiAMapping.hit(address)),
       resetVector = p.resetVector,
       withDebug = true,
       withEmbeddedJtagInstruction = !p.withSoftJtag,
-      withEmbeddedJtagTap = p.withSoftJtag
-    ))
+      withEmbeddedJtagTap = p.withSoftJtag,
+      aluCount    = 1,
+      decodeCount = 1,
+      withMmu = false,
+      withDistributedRam = false,
+      branchCount = 8,
+      withPerfCounters = false
+    )
+
+    //Tweek a few parameters
+    plugins.foreach{
+      case p : RobPlugin => {
+        p.completionWithReg = true
+        p.robSize = 32
+      }
+      case p : DispatchPlugin => p.slotCount = 16
+      case _ =>
+    }
+
+    cpu.plugins.load(plugins)
   }
 
   // Add some interconnect pipelining to improve FMax

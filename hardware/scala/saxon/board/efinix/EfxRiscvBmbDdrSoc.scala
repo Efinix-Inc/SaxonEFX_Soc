@@ -1,10 +1,12 @@
 package saxon.board.efinix
 
 
+import naxriscv.compatibility.{MemReadAsyncForceWriteFirst, MemReadAsyncToPhasedReadSyncPhase, MemReadAsyncToPhasedReadSyncPhaseTag, MultiPortWritesSymplifier, MultiPortWritesSymplifierTag}
+import naxriscv.misc.RegFilePlugin
 import saxon._
 import spinal.core._
 import spinal.core.fiber._
-import spinal.lib._
+import spinal.lib.{master, system, _}
 import spinal.core.sim._
 import spinal.lib.bus.amba3.apb.Apb3Config
 import spinal.lib.bus.amba3.apb.sim.{Apb3Listener, Apb3Monitor}
@@ -22,7 +24,6 @@ import spinal.lib.com.uart.sim.{UartDecoder, UartEncoder}
 import spinal.lib.eda.bench.{Bench, Rtl, XilinxStdTargets}
 import spinal.lib.generator._
 import spinal.lib.io.{Gpio, InOutWrapper}
-import spinal.lib.master
 import spinal.lib.memory.sdram.sdr._
 import spinal.lib.memory.sdram.sdr.sim.SdramModel
 import spinal.lib.memory.sdram.xdr.CoreParameter
@@ -296,13 +297,24 @@ class EfxRiscvBmbDdrSoc(val p : EfxRiscvBmbDdrSocParameter) extends Component{
 object EfxRiscvBmbDdrSoc {
   //Generate the SoC
   def main(args: Array[String]): Unit = {
-    val report = SpinalRtlConfig.copy(
-        defaultConfigForClockDomains = ClockDomainConfig(resetKind = SYNC),
-        inlineRom = false
-      ).generateVerilog{
+    val spinalConfig = SpinalRtlConfig.copy(
+      defaultConfigForClockDomains = ClockDomainConfig(resetKind = SYNC),
+      inlineRom = false
+    )
+    if(args.contains("--withNaxRiscv")){
+      spinalConfig.addTransformationPhase(new MultiPortWritesSymplifier(onlyTagged = true))
+      spinalConfig.addTransformationPhase(new MemReadAsyncToPhasedReadSyncPhase)
+    }
+
+    val report = spinalConfig.generateVerilog{
       val p = EfxRiscvBmbDdrSocParameter.defaultArgs(args)
       val toplevel = new EfxRiscvBmbDdrSoc(p){
         setDefinitionName(p.toplevelName)
+        val naxPatcher = p.withNaxRiscv generate hardFork{new Area{
+          val cdRf = ClockDomain.external("nax_rf", withReset = false).setSyncWith(system.naxCluster.cores.head.logic.cpu.clockDomain)
+          cdRf.clock.setName("io_naxRfClk")
+          system.naxCluster.cores.foreach(core => EfxNaxRiscvPatcher(core.plugins.get, core.logic.cpu.clockDomain, cdRf))
+        }}
       }
 
       //Match previous version names
@@ -340,7 +352,16 @@ object EfxRiscvBmbDdrSoc {
   }
 }
 
-
+object EfxNaxRiscvPatcher{
+  def apply(plugins : Seq[naxriscv.utilities.Plugin], cd : ClockDomain, cdRf : ClockDomain) = new Area{
+    //Patch the netlist for better inferation
+    val rfRa2RsTag = new MemReadAsyncToPhasedReadSyncPhaseTag(cdRf)
+    plugins.foreach {
+      case p: RegFilePlugin => p.logic.regfile.banks.foreach(_.ram.addTag(rfRa2RsTag).addTag(new MultiPortWritesSymplifierTag()))
+      case _ =>
+    }
+  }
+}
 
 
 object EfxRiscvAxiDdrSocSystemSim {
@@ -356,9 +377,24 @@ object EfxRiscvAxiDdrSocSystemSim {
     simConfig.addIncludeDir("../aesVerilog")
     simConfig.addRtl("../aesVerilog/aes_instruction.v")
     simConfig.addSimulatorFlag("-Wno-UNSIGNED")
+
+    val spinalConfig = SpinalConfig()
+    if(args.contains("--withNaxRiscv")){
+      spinalConfig.addTransformationPhase(new MultiPortWritesSymplifier(onlyTagged = true))
+      spinalConfig.addTransformationPhase(new MemReadAsyncToPhasedReadSyncPhase)
+//      spinalConfig.addTransformationPhase(new MemReadAsyncForceWriteFirst)
+    }
+
+    simConfig.withConfig(spinalConfig)
+
     simConfig.compile {
       val p = EfxRiscvBmbDdrSocParameter.defaultArgs(args)
       new EfxRiscvBmbDdrSoc(p){
+        val naxPatcher = p.withNaxRiscv generate hardFork{new Area{
+          val cdRf = ClockDomain.external("nax_rf", withReset = false).setSyncWith(system.naxCluster.cores.head.logic.cpu.clockDomain)
+          system.naxCluster.cores.foreach(core => EfxNaxRiscvPatcher(core.plugins.get, core.logic.cpu.clockDomain, cdRf))
+        }}
+
         val ddrSim = p.withDdrA generate system.peripherals.ddr.ddrLogic.produce (new Area {
           val axi4 = system.peripherals.ddr.ddrLogic.io.ddrA.setAsDirectionLess.toAxi4()
           val readOnly = master(axi4.toReadOnly()).setName("ddrA_sim_readOnly")
@@ -401,6 +437,14 @@ object EfxRiscvAxiDdrSocSystemSim {
       val ddrCd = dut.p.withDdrA generate dut.ddrCd.inputClockDomain.get
       if(dut.p.withDdrA) ddrCd.forkStimulus(ddrClkPeriod)
 //      ddrCd.forkSimSpeedPrinter()
+
+      if(dut.p.withNaxRiscv){
+        fork{
+          clockDomain.waitSampling()
+          sleep(systemClkPeriod*3/4)
+          DoClock(dut.naxPatcher.cdRf.clockSim, systemClkPeriod)
+        }
+      }
 
       val tcpJtagVex = if(dut.p.withVexRiscv) JtagTcp(
         jtag = dut.system.vexCluster.softJtag.jtag.io,
@@ -481,7 +525,8 @@ object EfxRiscvAxiDdrSocSystemSim {
 //        ddrMemory.loadBin(0x00001000, "software/standalone/test/aes/build/aes.bin")
 
 //        ddrMemory.loadBin(0x00001000, "software/standalone/timerAndGpioInterruptDemo/build/timerAndGpioInterruptDemo_spinal_sim.bin")
-        ddrMemory.loadBin(0x00001000, "software/standalone/dhrystone/build/dhrystone.bin")
+//        ddrMemory.loadBin(0x00001000, "software/standalone/dhrystone/build/dhrystone.bin")
+        ddrMemory.loadBin(0x00001000, "software/standalone/spiDemo/build/spiDemo.bin")
 //        ddrMemory.loadBin(0x00001000, "software/standalone/freertosDemo/build/freertosDemo_spinal_sim.bin")
 //        ddrMemory.loadBin(0x00001000, "software/standalone/smpDemo/build/smpDemo.bin")
 //        ddrMemory.loadBin(0x00001000, "software/standalone/timerExtraDemoWithPriority/build/timerExtraDemoWithPriority_spinal_sim.bin")
@@ -492,7 +537,7 @@ object EfxRiscvAxiDdrSocSystemSim {
 
       fork{
         val at = 0
-        val duration = 0
+        val duration = 10
         while(simTime() < at*1000000000l) {
           disableSimWave()
           sleep(100000 * 10000)
