@@ -175,7 +175,7 @@ class EfxRiscvPeripheralArea (val p : EfxRiscvBmbDdrSocParameter,
       bus = bmb,
       mapping = p.axiAMapping
     )
-
+    
     interconnect.addConnection(bridge.bmb, bmb)
 
     val logic = add task new Area{

@@ -247,6 +247,9 @@ class EfxRiscvBmbDdrSoc(val p : EfxRiscvBmbDdrSocParameter) extends Component{
   val debugResetCd = if(p.withDdrA) ddrCd else if(p.withPeripheralClock) peripheralCd else systemCd
 
   val system = systemCd.outputClockDomain on new Area{
+    sexport("cpuHz", p.systemFrequency.toLong)
+    sexport("peripheralHz", if(p.withPeripheralClock) p.peripheralFrequancy.toLong else p.systemFrequency.toLong)
+
     val peripheralCdHandle =  (if(p.withPeripheralClock) peripheralCd else systemCd).outputClockDomain
     val vexCluster = p.withVexRiscv generate new EfxVexRiscvCluster(
       p,
