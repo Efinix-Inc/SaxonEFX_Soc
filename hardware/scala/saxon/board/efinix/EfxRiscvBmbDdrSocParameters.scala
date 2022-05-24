@@ -76,6 +76,7 @@ case class EfxRiscvBmbDdrSocParameter(systemFrequency : HertzNumber,
                                       interrupt : Seq[InterruptSpec] = Nil,
                                       ddrA  : Axi4Config,
                                       axiA  : Axi4Config,
+                                      ddrAAxi4 : Boolean,
                                       ddrAMapping      : SizeMapping,
                                       apbBridgeMapping : SizeMapping,
                                       axiAMapping      : SizeMapping,
@@ -150,6 +151,7 @@ object EfxRiscvBmbDdrSocParameter{
     var withPeripheralClock = false
     var additionalJtagTapMax = 0
     var withNaxRiscv = false
+    var ddrAAxi4 = false
 
     def decode(str : String) = if(str.contains("0x"))
       BigInt(str.replace("0x",""), 16)
@@ -177,6 +179,7 @@ object EfxRiscvBmbDdrSocParameter{
       opt[Unit]("withPeripheralClock")action { (v, c) => withPeripheralClock = true} text(s"All the peripherals will use a dedicated clock. You will have to set peripheralFrequency too")
       opt[String]("ddrADataWidth")action { (v, c) => ddrADataWidth = decode(v).toInt } text(s"Default $ddrADataWidth")
       opt[String]("uartBaudrate")action { (v, c) => uartBaudrate = decode(v).toInt } text(s"Default $uartBaudrate")
+      opt[Unit]("ddrAAxi4")action { (v, c) => ddrAAxi4 = true } text(s"Default $ddrAAxi4")
       opt[String]("ddrAAddress")action { (v, c) => ddrAAddress = decode(v) } text(s"Default 0x${ddrAAddress.toString(16)}")
       opt[String]("ddrASize")action { (v, c) => ddrASize = decode(v) } text(s"Default 0x${ddrASize.toString(16)}")
       opt[String]("apbBridgeAddress")action { (v, c) => apbBridgeAddress = decode(v) } text(s"Default 0x${apbBridgeAddress.toString(16)}")
@@ -358,6 +361,7 @@ object EfxRiscvBmbDdrSocParameter{
       cpuCount = cpuCount,
       withFpu = withFpu,
       withDdrA = withDdrA,
+      ddrAAxi4 = ddrAAxi4,
       withAxiA = withAxiA,
       linuxReady = linuxReady,
       withAtomic = withAtomic,
@@ -410,6 +414,7 @@ object EfxRiscvBmbDdrSocParameter{
       rmii = Nil,
       apbSlaves = Nil,
       ddrMasters = Nil,
+      ddrAAxi4 = false,
       axiA = Axi4Config(
         addressWidth = 32,
         dataWidth    = 32,

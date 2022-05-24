@@ -399,7 +399,7 @@ object EfxRiscvAxiDdrSocSystemSim {
         }}
 
         val ddrSim = p.withDdrA generate system.peripherals.ddr.ddrLogic.produce (new Area {
-          val axi4 = system.peripherals.ddr.ddrLogic.io.ddrA.setAsDirectionLess.toAxi4()
+          val axi4 = if(p.ddrAAxi4) system.peripherals.ddr.ddrLogic.io.ddrA_axi4.setAsDirectionLess() else system.peripherals.ddr.ddrLogic.io.ddrA_axi3.setAsDirectionLess.toAxi4()
           val readOnly = master(axi4.toReadOnly()).setName("ddrA_sim_readOnly")
           val writeOnly = master(axi4.toWriteOnly()).setName("ddrA_sim_writeOnly")
           for(u <-system.peripherals.ddr.ddrLogic.userAdapters){
@@ -540,7 +540,7 @@ object EfxRiscvAxiDdrSocSystemSim {
 
       fork{
         val at = 0
-        val duration = 10
+        val duration = 0
         while(simTime() < at*1000000000l) {
           disableSimWave()
           sleep(100000 * 10000)

@@ -51,7 +51,8 @@ class EfxRiscvPeripheralArea (val p : EfxRiscvBmbDdrSocParameter,
   val ddr = p.withDdrA generate TrionDdrGenerator(
     addressWidth = p.ddrA.addressWidth,
     dataWidth = p.ddrA.dataWidth,
-    mapping = p.ddrAMapping
+    mapping = p.ddrAMapping,
+    withAxi4 = p.ddrAAxi4
   )
 
   if(p.withDdrA) {
