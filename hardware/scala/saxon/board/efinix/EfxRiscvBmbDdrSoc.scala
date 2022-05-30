@@ -1,7 +1,7 @@
 package saxon.board.efinix
 
 
-import naxriscv.compatibility.{MemReadAsyncForceWriteFirst, MemReadAsyncToPhasedReadSyncPhase, MemReadAsyncToPhasedReadSyncPhaseTag, MultiPortWritesSymplifier, MultiPortWritesSymplifierTag}
+import naxriscv.compatibility.{MemReadAsyncForceWriteFirst, MemReadAsyncTagging, MemReadAsyncToPhasedReadSyncPhase, MemReadAsyncToPhasedReadSyncPhaseTag, MultiPortWritesSymplifier, MultiPortWritesSymplifierTag}
 import naxriscv.misc.RegFilePlugin
 import saxon._
 import spinal.core._
@@ -310,6 +310,7 @@ object EfxRiscvBmbDdrSoc {
     if(args.contains("--withNaxRiscv")){
       spinalConfig.addTransformationPhase(new MultiPortWritesSymplifier(onlyTagged = true))
       spinalConfig.addTransformationPhase(new MemReadAsyncToPhasedReadSyncPhase)
+      spinalConfig.addTransformationPhase(new MemReadAsyncTagging(new AttributeString("syn_ramstyle", "registers")))
     }
 
     val report = spinalConfig.generateVerilog{
@@ -532,18 +533,19 @@ object EfxRiscvAxiDdrSocSystemSim {
 
 //        ddrMemory.loadBin(0x00001000, "software/standalone/timerAndGpioInterruptDemo/build/timerAndGpioInterruptDemo_spinal_sim.bin")
 //        ddrMemory.loadBin(0x00001000, "software/standalone/dhrystone/build/dhrystone.bin")
-        ddrMemory.loadBin(0x00001000, "software/standalone/spiDemo/build/spiDemo.bin")
+//        ddrMemory.loadBin(0x00001000, "software/standalone/spiDemo/build/spiDemo.bin")
 //        ddrMemory.loadBin(0x00001000, "software/standalone/freertosDemo/build/freertosDemo_spinal_sim.bin")
 //        ddrMemory.loadBin(0x00001000, "software/standalone/smpDemo/build/smpDemo.bin")
 //        ddrMemory.loadBin(0x00001000, "software/standalone/timerExtraDemoWithPriority/build/timerExtraDemoWithPriority_spinal_sim.bin")
 //          ddrMemory.loadBin(0x00001000, "software/standalone/fpu/build/fpu.bin")
+        ddrMemory.loadBin(0x00001000, "software/standalone/asm/build/asm.bin")
       }
 
 //      if(flash != null) flash.loadBinary("software/standalone/blinkAndEcho/build/blinkAndEcho_spinal_sim.bin", 0xF00000)
 
       fork{
         val at = 0
-        val duration = 0
+        val duration = 1
         while(simTime() < at*1000000000l) {
           disableSimWave()
           sleep(100000 * 10000)
