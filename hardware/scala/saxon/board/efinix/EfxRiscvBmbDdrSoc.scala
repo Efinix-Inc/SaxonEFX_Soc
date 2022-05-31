@@ -189,8 +189,8 @@ class EfxVexRiscvCluster(p : EfxRiscvBmbDdrSocParameter,
   val hardJtag = !p.withSoftJtag generate new Area {
     val debug = withDebugBus(debugCd.outputClockDomain, debugResetCd, 0x10B80000).withJtagInstruction(p.additionalJtagTapMax)
     val jtagCtrl = Handle(debug.logic.jtagBridge.io.ctrl.toIo).setName("jtagCtrl")
-    val jtagCtrl_tck = in(Bool()) setName("jtagCtrl_tck")
-    debug.jtagClockDomain.load(ClockDomain(jtagCtrl_tck))
+    val jtagCtrl_tck = Handle(in(Bool()) setName("jtagCtrl_tck"))
+    debug.jtagClockDomain.loadAsync(ClockDomain(jtagCtrl_tck))
   }
 
   val softJtag = p.withSoftJtag generate new Area {
