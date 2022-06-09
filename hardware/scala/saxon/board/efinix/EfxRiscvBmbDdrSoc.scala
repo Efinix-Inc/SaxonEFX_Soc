@@ -123,6 +123,7 @@ class EfxVexRiscvCluster(p : EfxRiscvBmbDdrSocParameter,
     if(p.customInstruction) cpu.config.plugins +=  new CfuPlugin(
       stageCount = 2,
       allowZeroLatency = true,
+      withEnable = false,
       encodings = List(
         CfuPluginEncoding (
           instruction = M"-------------------------0001011",
