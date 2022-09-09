@@ -52,7 +52,8 @@ class EfxRiscvPeripheralArea (val p : EfxRiscvBmbDdrSocParameter,
     addressWidth = p.ddrA.addressWidth,
     dataWidth = p.ddrA.dataWidth,
     mapping = p.ddrAMapping,
-    withAxi4 = p.ddrAAxi4
+    withAxi4 = p.ddrAAxi4,
+    withUnburstify = p.ddrANoBurst
   )
 
   if(p.withDdrA) {

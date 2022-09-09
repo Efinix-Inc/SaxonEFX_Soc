@@ -55,57 +55,15 @@ class NaxRiscvSocBase(cpuCount : Int, withSupervisor : Boolean = true, periphera
       val memNode = BmbBridgeGenerator()
       val periphNode = BmbBridgeGenerator()
       interconnect.addConnection(
-        cpu.iMem -> List(memNode.bmb),
-        cpu.dMemRead -> List(memNode.bmb),
+        cpu.iMem      -> List(memNode.bmb),
+        cpu.dMemRead  -> List(memNode.bmb),
         cpu.dMemWrite -> List(memNode.bmb),
-        memNode.bmb -> List(mem.bmb),
+        memNode.bmb   -> List(mem.bmb),
 
-        cpu.iPeriph -> List(periphNode.bmb),
-        cpu.dPeriph -> List(periphNode.bmb),
+        cpu.iPeriph    -> List(periphNode.bmb),
+        cpu.dPeriph    -> List(periphNode.bmb),
         periphNode.bmb -> List(periph.bmb)
       )
     }
   }
-
-//  // Utility to create the debug fabric usable by JTAG
-//  def withDebugBus(debugCd : Handle[ClockDomain], systemCd : ClockDomainResetGenerator, address : Long) = new Area{
-//    val ctrl = debugCd on BmbBridgeGenerator()
-//
-//    for ((cpu,i) <- cores.zipWithIndex) {
-//      cores(i).enableDebugBmb(debugCd, systemCd, SizeMapping(address + i * 0x1000, 0x1000))
-//      interconnect.addConnection(ctrl.bmb, cpu.debugBmb)
-//    }
-//
-//    def withJtag() = {
-//      val tap = debugCd on JtagTapDebuggerGenerator()
-//      interconnect.addConnection(tap.bmb, ctrl.bmb)
-//      tap
-//    }
-//
-//    def withJtagInstruction(headerIgnoreWidth : Int) = {
-//      val tap = debugCd on JtagInstructionDebuggerGenerator(headerIgnoreWidth)
-//      interconnect.addConnection(tap.bmb, ctrl.bmb)
-//      tap
-//    }
-//
-//    // For Xilinx series 7 FPGA
-//    def withBscane2(userId : Int, headerIgnoreWidth : Int) = {
-//      val tap = debugCd on Bscane2BmbMasterGenerator(userId, headerIgnoreWidth)
-//      interconnect.addConnection(tap.bmb, ctrl.bmb)
-//      tap
-//    }
-//
-//    // For Altera FPGAs
-//    def withVJtag(headerIgnoreWidth : Int) = {
-//      val tap = debugCd on VJtag2BmbMasterGenerator(headerIgnoreWidth)
-//      interconnect.addConnection(tap.bmb, ctrl.bmb)
-//      tap
-//    }
-//  }
-//
-//  def withoutDebug(): Unit ={
-//    for ((cpu,i) <- cores.zipWithIndex) {
-//      cores(i).disableDebug()
-//    }
-//  }
 }

@@ -16,7 +16,7 @@ import spinal.core.fiber._
 
 
 
-case class TrionDdrGenerator(addressWidth : Int, dataWidth : Int, mapping: AddressMapping, withAxi4 : Boolean)(implicit interconnect: BmbInterconnectGenerator) extends Generator{
+case class TrionDdrGenerator(addressWidth : Int, dataWidth : Int, mapping: AddressMapping, withAxi4 : Boolean, withUnburstify : Boolean)(implicit interconnect: BmbInterconnectGenerator) extends Generator{
   val withAxi3 = !withAxi4
   val systemClockDomain = createDependency[ClockDomain]
   val memoryClockDomain = createDependency[ClockDomain]
@@ -176,17 +176,57 @@ case class TrionDdrGenerator(addressWidth : Int, dataWidth : Int, mapping: Addre
     val ddrAAxi3 = withAxi3 generate Axi4Shared(ddrAConfig)
     val ddrAAxi4 = withAxi4 generate Axi4(ddrAConfig)
     if(withAxi3) {
-      ddrAAxi3.arw <-/< arbiterAxi3Shared.io.output.arw
-      ddrAAxi3.w << arbiterAxi3Shared.io.output.w.stage()
-      ddrAAxi3.r >> arbiterAxi3Shared.io.output.r
-      ddrAAxi3.b >/-> arbiterAxi3Shared.io.output.b
+      if(!withUnburstify) {
+        ddrAAxi3.arw <-/< arbiterAxi3Shared.io.output.arw
+        ddrAAxi3.w << arbiterAxi3Shared.io.output.w.stage()
+        ddrAAxi3.r >> arbiterAxi3Shared.io.output.r
+        ddrAAxi3.b >/-> arbiterAxi3Shared.io.output.b
+      }
+
+      if(withUnburstify){
+        val bridge = new Axi4SharedUnbursterZeroId(ddrAConfig, 16)
+        bridge.io.input.arw <-/< arbiterAxi3Shared.io.output.arw
+        bridge.io.input.w   <<   arbiterAxi3Shared.io.output.w.stage()
+        bridge.io.input.r   >>   arbiterAxi3Shared.io.output.r
+        bridge.io.input.b   >/-> arbiterAxi3Shared.io.output.b
+
+
+        ddrAAxi3.arw << bridge.io.output.arw
+        ddrAAxi3.w << bridge.io.output.w
+        ddrAAxi3.r >> bridge.io.output.r
+        ddrAAxi3.b >> bridge.io.output.b
+      }
     }
     if(withAxi4) {
-      ddrAAxi4.aw <-/< arbiterAxi4Write.io.output.aw
-      ddrAAxi4.ar <-/< arbiterAxi4Read.io.output.ar
-      ddrAAxi4.w << arbiterAxi4Write.io.output.w.stage()
-      ddrAAxi4.r >> arbiterAxi4Read.io.output.r
-      ddrAAxi4.b >/-> arbiterAxi4Write.io.output.b
+      if(!withUnburstify) {
+        ddrAAxi4.aw <-/< arbiterAxi4Write.io.output.aw
+        ddrAAxi4.ar <-/< arbiterAxi4Read.io.output.ar
+        ddrAAxi4.w << arbiterAxi4Write.io.output.w.stage()
+        ddrAAxi4.r >> arbiterAxi4Read.io.output.r
+        ddrAAxi4.b >/-> arbiterAxi4Write.io.output.b
+      }
+
+      if(withUnburstify) {
+        val bridge = new Axi4UnbursterZeroId(ddrAConfig, 16)
+        bridge.io.input.aw <-/< arbiterAxi4Write.io.output.aw
+        bridge.io.input.ar <-/< arbiterAxi4Read.io.output.ar
+        bridge.io.input.w << arbiterAxi4Write.io.output.w.stage()
+        bridge.io.input.r >> arbiterAxi4Read.io.output.r
+        bridge.io.input.b >/-> arbiterAxi4Write.io.output.b
+        val c = Reg(UInt(9 bits)) init(0) setName("counter_w_fire")
+        c := c + (bridge.io.input.aw.len+^1).andMask(bridge.io.input.aw.fire) - bridge.io.input.w.fire.asUInt
+        CounterUpDown(256, bridge.io.input.aw.fire, bridge.io.input.b.fire).setName("counter_b_fire")
+        val c2 = Reg(UInt(9 bits)) init(0) setName("counter2_w_fire")
+        c2 := c2 + (bridge.io.output.aw.len+^1).andMask(bridge.io.output.aw.fire) - bridge.io.output.w.fire.asUInt
+        CounterUpDown(256, bridge.io.output.aw.fire, bridge.io.output.b.fire).setName("counter2_b_fire")
+
+
+        ddrAAxi4.aw << bridge.io.output.aw
+        ddrAAxi4.ar << bridge.io.output.ar
+        ddrAAxi4.w << bridge.io.output.w
+        ddrAAxi4.r >> bridge.io.output.r
+        ddrAAxi4.b >> bridge.io.output.b
+      }
     }
 
     //Bridge adding the AXI3 WID and completting pending write transactions durring memory reset
@@ -258,8 +298,8 @@ case class TrionDdrGenerator(addressWidth : Int, dataWidth : Int, mapping: Addre
       ddrAAxi3.r <-< io.ddrA_axi3.r
       ddrAAxi3.b <-/< io.ddrA_axi3.b
 
-      (List(io.ddrA_axi3.arw.valid) ++ io.ddrA_axi3.arw.payload.flatten).foreach(s => KeepAttribute(s.getDrivingReg))
-      (List(ddrAAxi3.r.valid) ++ ddrAAxi3.r.payload.flatten).foreach(s => KeepAttribute(s.getDrivingReg))
+      (List(io.ddrA_axi3.arw.valid) ++ io.ddrA_axi3.arw.payload.flatten).foreach(s => KeepAttribute(s.getDrivingReg()))
+      (List(ddrAAxi3.r.valid) ++ ddrAAxi3.r.payload.flatten).foreach(s => KeepAttribute(s.getDrivingReg()))
     }
 
     val ddrAToAxi4 = withAxi4 generate new ClockingArea(ClockDomain(memoryClockDomain.clock, ddrAReset.reset, config = ClockDomainConfig(resetKind = ASYNC))) {
@@ -297,7 +337,7 @@ case class TrionDdrGenerator(addressWidth : Int, dataWidth : Int, mapping: Addre
       //Pipelined connection to the DDR controller
       ioAw >/-> io.ddrA_axi4.aw
       ddrAAxi4.ar >/-> io.ddrA_axi4.ar
-      ddrAAxi4.w >> io.ddrA_axi4.w
+      ddrAAxi4.w.haltWhen(!widStream.valid) >> io.ddrA_axi4.w
       ddrAAxi4.r <-< io.ddrA_axi4.r
       ddrAAxi4.b <-/< io.ddrA_axi4.b
     }
@@ -305,3 +345,199 @@ case class TrionDdrGenerator(addressWidth : Int, dataWidth : Int, mapping: Addre
 }
 
 
+import spinal.lib.bus.amba4.axi._
+class Axi4ReadOnlyUnbursterZeroId(config: Axi4Config, pendingMax: Int = 8) extends Component {
+  val io = new Bundle {
+    val input = slave(Axi4ReadOnly(config))
+    val output = master(Axi4ReadOnly(config.copy()))
+  }
+
+  case class Context() extends Bundle {
+    val len = config.lenType
+    val id = config.idType
+  }
+
+  val cmd = new Area{
+    val (outputFork, contextFork) = StreamFork2(io.input.ar)
+
+    val unburstified = outputFork.unburstify
+    io.output.ar.arbitrationFrom(unburstified)
+    io.output.ar.payload.assignSomeByName(unburstified.fragment)
+    io.output.ar.len.removeAssignments() := 0
+    io.output.ar.id.removeAssignments() := 0
+
+    val context = contextFork.translateWith{
+      val p = Context()
+      p.len := contextFork.len
+      p.id := contextFork.id
+      p
+    }
+  }
+
+  val rsp = new Area{
+    val context = cmd.context.queueLowLatency(pendingMax, latency = 1)
+
+    val counter = Reg(config.lenType) init(0)
+    context.ready := False
+    when(io.input.r.fire){
+      counter := counter + 1
+      when(io.input.r.last){
+        counter := 0
+        context.ready := True
+      }
+    }
+
+    io.input.r.arbitrationFrom(io.output.r.haltWhen(!context.valid))
+    io.input.r.payload.assignSomeByName(io.output.r.payload)
+    io.input.r.id.removeAssignments() := context.id
+    io.input.r.last.removeAssignments() := counter === context.len
+  }
+}
+
+class Axi4WriteOnlyUnbursterZeroId(config: Axi4Config, pendingMax: Int = 8) extends Component {
+  val io = new Bundle {
+    val input = slave(Axi4WriteOnly(config))
+    val output = master(Axi4WriteOnly(config.copy()))
+  }
+
+  case class Context() extends Bundle {
+    val len = config.lenType
+    val id = config.idType
+  }
+
+  val cmd = new Area{
+    val (outputFork, contextFork) = StreamFork2(io.input.aw)
+
+    val unburstified = outputFork.unburstify
+    io.output.aw.arbitrationFrom(unburstified)
+    io.output.aw.payload.assignSomeByName(unburstified.fragment)
+    io.output.aw.len.removeAssignments() := 0
+    io.output.aw.id.removeAssignments() := 0
+
+    io.output.w << io.input.w
+    io.output.w.last.removeAssignments() := True
+
+    val context = contextFork.translateWith{
+      val p = Context()
+      p.len := contextFork.len
+      p.id := contextFork.id
+      p
+    }
+  }
+
+  val rsp = new Area{
+    val context = cmd.context.queueLowLatency(pendingMax, latency = 1)
+
+    val counter = Reg(config.lenType) init(0)
+    context.ready := False
+    when(io.output.b.fire){
+      counter := counter + 1
+      when(io.input.b.valid){
+        counter := 0
+        context.ready := True
+      }
+    }
+
+    io.input.b.arbitrationFrom(io.output.b.haltWhen(!context.valid).takeWhen(counter === context.len))
+    io.input.b.payload.assignSomeByName(io.output.b.payload)
+    io.input.b.id.removeAssignments() := context.id
+  }
+}
+
+case class Axi4UnbursterZeroId(config: Axi4Config, pendingMax: Int = 8) extends Component {
+  val io = new Bundle {
+    val input = slave(Axi4(config))
+    val output = master(Axi4(config.copy()))
+  }
+  val read = new Axi4ReadOnlyUnbursterZeroId(config, pendingMax)
+  read.io.input.ar  <> io.input.ar
+  read.io.input.r   <> io.input.r
+  read.io.output.ar <> io.output.ar
+  read.io.output.r  <> io.output.r
+
+  val write = new Axi4WriteOnlyUnbursterZeroId(config, pendingMax)
+  write.io.input.aw  <> io.input.aw
+  write.io.input.w   <> io.input.w
+  write.io.input.b   <> io.input.b
+  write.io.output.aw <> io.output.aw
+  write.io.output.w  <> io.output.w
+  write.io.output.b  <> io.output.b
+}
+
+class Axi4SharedUnbursterZeroId(config: Axi4Config, pendingMax: Int = 8) extends Component {
+  val io = new Bundle {
+    val input = slave(Axi4Shared(config))
+    val output = master(Axi4Shared(config.copy()))
+  }
+
+  case class Context() extends Bundle {
+    val len = config.lenType
+    val id = config.idType
+  }
+
+  val cmd = new Area{
+    val (outputFork, readFork, writeFork) = StreamFork3(io.input.arw)
+
+    val unburstified = outputFork.unburstify
+    io.output.arw.arbitrationFrom(unburstified)
+    io.output.arw.payload.assignSomeByName(unburstified.fragment)
+    io.output.arw.len.removeAssignments() := 0
+    io.output.arw.id.removeAssignments() := 0
+
+    io.output.w << io.input.w
+    io.output.w.last.removeAssignments() := True
+
+    val contextPayload = Context()
+    contextPayload.len := readFork.len
+    contextPayload.id := readFork.id
+    val readContext = readFork.takeWhen(!readFork.write).translateWith(contextPayload)
+    val writeContext = writeFork.takeWhen(writeFork.write).translateWith(contextPayload)
+  }
+
+  val rspRead = new Area{
+    val context = cmd.readContext.queueLowLatency(pendingMax, latency = 1)
+    assert(!(io.input.r.valid && !context.valid))
+
+    val counter = Reg(config.lenType) init(0)
+    context.ready := False
+    when(io.input.r.fire){
+      counter := counter + 1
+      when(io.input.r.last){
+        counter := 0
+        context.ready := True
+      }
+    }
+
+    io.input.r.arbitrationFrom(io.output.r.haltWhen(!context.valid))
+    io.input.r.payload.assignSomeByName(io.output.r.payload)
+    io.input.r.id.removeAssignments() := context.id
+    io.input.r.last.removeAssignments() := counter === context.len
+  }
+
+  val writeRsp = new Area{
+    val context = cmd.writeContext.queueLowLatency(pendingMax, latency = 1)
+    assert(!(io.input.b.valid && !context.valid))
+
+    val counter = Reg(config.lenType) init(0)
+    context.ready := False
+    when(io.output.b.fire){
+      counter := counter + 1
+      when(io.input.b.valid){
+        counter := 0
+        context.ready := True
+      }
+    }
+
+    io.input.b.arbitrationFrom(io.output.b.haltWhen(!context.valid).takeWhen(counter === context.len))
+    io.input.b.payload.assignSomeByName(io.output.b.payload)
+    io.input.b.id.removeAssignments() := context.id
+  }
+}
+
+
+object Axi4ReadOnlyUnbursterZeroIdGen extends App{
+  SpinalVerilog(new Axi4ReadOnlyUnbursterZeroId(Axi4Config(32,32, idWidth = 4)))
+}
+object Axi4WriteOnlyUnbursterZeroIdGen extends App{
+  SpinalVerilog(new Axi4WriteOnlyUnbursterZeroId(Axi4Config(32,32, idWidth = 4)))
+}

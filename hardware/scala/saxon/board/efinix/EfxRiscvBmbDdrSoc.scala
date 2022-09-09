@@ -1,7 +1,7 @@
 package saxon.board.efinix
 
 
-import naxriscv.compatibility.{MemReadAsyncForceWriteFirst, MemReadAsyncTagging, MemReadAsyncToPhasedReadSyncPhase, MemReadAsyncToPhasedReadSyncPhaseTag, MultiPortWritesSymplifier, MultiPortWritesSymplifierTag}
+import naxriscv.compatibility.{MemReadAsyncForceWriteFirst, MemReadAsyncTagging, MemReadAsyncToPhasedReadSyncPhase, MemReadAsyncToPhasedReadSyncPhaseTag, MemReportReadAsyncWithoutRegAddress, MultiPortWritesSymplifier, MultiPortWritesSymplifierTag}
 import naxriscv.misc.RegFilePlugin
 import saxon._
 import spinal.core._
@@ -304,6 +304,8 @@ class EfxRiscvBmbDdrSoc(val p : EfxRiscvBmbDdrSocParameter) extends Component{
 object EfxRiscvBmbDdrSoc {
   //Generate the SoC
   def main(args: Array[String]): Unit = {
+
+    LutInputs.set(4)
     val spinalConfig = SpinalRtlConfig.copy(
       defaultConfigForClockDomains = ClockDomainConfig(resetKind = SYNC),
       inlineRom = false
@@ -311,7 +313,9 @@ object EfxRiscvBmbDdrSoc {
     if(args.contains("--withNaxRiscv")){
       spinalConfig.addTransformationPhase(new MultiPortWritesSymplifier(onlyTagged = true))
       spinalConfig.addTransformationPhase(new MemReadAsyncToPhasedReadSyncPhase)
-      spinalConfig.addTransformationPhase(new MemReadAsyncTagging(new AttributeString("syn_ramstyle", "registers")))
+//      spinalConfig.addTransformationPhase(new MemReadAsyncTagging(new AttributeString("syn_ramstyle", "registers")))
+      spinalConfig.addTransformationPhase(new MemReadAsyncForceWriteFirst)
+      spinalConfig.addTransformationPhase(new MemReportReadAsyncWithoutRegAddress)
     }
 
     val report = spinalConfig.generateVerilog{
@@ -475,6 +479,7 @@ object EfxRiscvAxiDdrSocSystemSim {
       )
 
       val flash = (dut.system.peripherals.spi.size != 0) generate FlashModel(dut.system.peripherals.spi(0).io, peripheralCd)
+      dut.system.peripherals.spi.tail.foreach(_.io.get.data.foreach(_.read #= 0))
 
       if(dut.p.withDdrA)fork {
         ddrCd.waitSampling(100)
@@ -520,17 +525,28 @@ object EfxRiscvAxiDdrSocSystemSim {
         }
 
         val images = "../buildroot-build/images/"
+//        val images = "/home/rawrr/Downloads/sapphire_dual_core/"
         ddrMemory.loadBin(0x00001000, images + "fw_jump.bin")
         ddrMemory.loadBin(0x00100000, images + "u-boot.bin")
-//        ddrMemory.loadBin(0x00400000, images + "uImage")
-//        ddrMemory.loadBin(0x00FF0000, images + "linux.dtb")
-//        ddrMemory.loadBin(0x00FFFFC0, images + "rootfs.cpio.uboot")
+        ddrMemory.loadBin(0x00400000, images + "uImage")
+        ddrMemory.loadBin(0x00FF0000, images + "linux.dtb")
+        ddrMemory.loadBin(0x00FFFFC0, images + "rootfs.cpio.uboot")
 //
 //        //Bypass uboot
-//        ddrMemory.loadBin(0x00400000, images + "Image")
-//        List(0x00000897, 0x01088893, 0x0008a883 , 0x000880e7, 0x00400000).zipWithIndex.foreach{case (v,i) => ddrMemory.write(0x00100000+i*4, v)}
+        ddrMemory.loadBin(0x00400000, images + "Image")
+        List(0x00000897, 0x01088893, 0x0008a883 , 0x000880e7, 0x00400000).zipWithIndex.foreach{case (v,i) => ddrMemory.write(0x00100000+i*4, v)}
 
-//        ddrMemory.loadBin(0x00001000, "software/standalone/test/aes/build/aes.bin")
+
+
+//        ddrMemory.loadBin(0x01000000, images + "fw_jump.bin")
+//        ddrMemory.loadBin(0x01f00000, images + "linux.dtb") //0x00cf0000
+//        ddrMemory.loadBin(0x00400000, images + "Image")
+
+//        List(0x00000897, 0x01088893, 0x0008a883 , 0x000880e7, 0x01000000).zipWithIndex.foreach{case (v,i) => ddrMemory.write(0x00001000+i*4, v)}
+//        List(0x00000897, 0x01088893, 0x0008a883 , 0x000880e7, 0x00400000).zipWithIndex.foreach{case (v,i) => ddrMemory.write(0x01040000+i*4, v)}
+
+
+//        ddrMemory.loadBin(0x00001000, "software/standalone/staticLink/build/staticLink.bin")
 
 //        ddrMemory.loadBin(0x00001000, "software/standalone/timerAndGpioInterruptDemo/build/timerAndGpioInterruptDemo_spinal_sim.bin")
 //        ddrMemory.loadBin(0x00001000, "software/standalone/dhrystone/build/dhrystone.bin")
@@ -539,14 +555,14 @@ object EfxRiscvAxiDdrSocSystemSim {
 //        ddrMemory.loadBin(0x00001000, "software/standalone/smpDemo/build/smpDemo.bin")
 //        ddrMemory.loadBin(0x00001000, "software/standalone/timerExtraDemoWithPriority/build/timerExtraDemoWithPriority_spinal_sim.bin")
 //          ddrMemory.loadBin(0x00001000, "software/standalone/fpu/build/fpu.bin")
-        ddrMemory.loadBin(0x00001000, "software/standalone/asm/build/asm.bin")
+//        ddrMemory.loadBin(0x00001000, "software/standalone/asm/build/asm.bin")
       }
 
 //      if(flash != null) flash.loadBinary("software/standalone/blinkAndEcho/build/blinkAndEcho_spinal_sim.bin", 0xF00000)
 
       fork{
         val at = 0
-        val duration = 1
+        val duration = 0
         while(simTime() < at*1000000000l) {
           disableSimWave()
           sleep(100000 * 10000)
@@ -559,7 +575,7 @@ object EfxRiscvAxiDdrSocSystemSim {
         while(true) {
           disableSimWave()
           sleep(100000 * 10000)
-//          enableSimWave()
+          enableSimWave()
           sleep(  100 * 10000)
         }
       }

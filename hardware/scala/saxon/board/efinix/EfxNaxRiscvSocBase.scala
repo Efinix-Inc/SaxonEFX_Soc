@@ -116,13 +116,59 @@ class EfxNaxRiscvCluster(p : EfxRiscvBmbDdrSocParameter,
     val io = p.logic.jtag.toIo.setName("jtag")
   })
 
-  interconnect.setPipelining(bmbPeripheral.bmb)(cmdHalfRate = !p.withL1D, rspHalfRate = true)
-//  for(cpu <- cores) interconnect.setPipelining(cpu.dBus)(cmdValid = true, invValid = p.withCoherency, ackValid = p.withCoherency, syncValid = p.withCoherency)
+  interconnect.setPipelining(bmbPeripheral.bmb)(cmdHalfRate = true, rspHalfRate = true)
+  for(cpu <- cores) {
+    interconnect.setPipelining(cpu.iMem)(cmdHalfRate = true)
+    interconnect.setPipelining(cpu.dMemRead)(cmdHalfRate = true)
+  }
 //  for(cpu <- cores) interconnect.setPipelining(cpu.iBus)(rspValid = true)
   interconnect.setPipelining(bridge.bmb)(cmdValid = true, cmdReady = true)
 //  interconnect.setPipelining(fabric.iBus.bmb)(cmdValid = true)
 //  interconnect.setPipelining(fabric.exclusiveMonitor.input)(cmdValid = true, cmdReady = true, rspValid = true)
   interconnect.setPipelining(ramA.ctrl)(rspValid = true)
 
+  interconnect.setPipelining(fabric.periph.bmb)(cmdHalfRate = true, rspHalfRate = true)
+  interconnect.setPipelining(fabric.mem.bmb)(cmdValid = true, cmdReady = true, rspValid = true)
+
+
   interconnect.getConnection(bridge.bmb, bmbPeripheral.bmb).ccByToggle
 }
+
+
+/*
+XLRs: 51345 / 60800 (84.45%)
+	XLRs needed for Logic: 26240 / 60800 (43.16%)
+	XLRs needed for Logic + FF: 6041 / 60800 (9.94%)
+	XLRs needed for Adder: 866 / 60800 (1.42%)
+	XLRs needed for Adder + FF: 544 / 60800 (0.89%)
+	XLRs needed for FF: 17653 / 60800 (29.03%)
+	XLRs needed for SRL8: 1 / 14720 (0.01%)
+	XLRs needed for SRL8+FF: 0 / 14720 (0.00%)
+	XLRs needed for Routing: 0 / 60800 (0.00%)
+
+22497 ff 29558 lut 150 ram
+
+XLRs: 40487 / 60800 (66.59%)
+	XLRs needed for Logic: 20872 / 60800 (34.33%)
+	XLRs needed for Logic + FF: 6111 / 60800 (10.05%)
+	XLRs needed for Adder: 866 / 60800 (1.42%)
+	XLRs needed for Adder + FF: 544 / 60800 (0.89%)
+	XLRs needed for FF: 12093 / 60800 (19.89%)
+	XLRs needed for SRL8: 1 / 14720 (0.01%)
+	XLRs needed for SRL8+FF: 0 / 14720 (0.00%)
+	XLRs needed for Routing: 0 / 60800 (0.00%)
+
+12482 ff 20806 lut 159 ram
+
+XLRs: 34519 / 60800 (56.77%)
+	XLRs needed for Logic: 17496 / 60800 (28.78%)
+	XLRs needed for Logic + FF: 6107 / 60800 (10.04%)
+	XLRs needed for Adder: 866 / 60800 (1.42%)
+	XLRs needed for Adder + FF: 544 / 60800 (0.89%)
+	XLRs needed for FF: 9505 / 60800 (15.63%)
+	XLRs needed for SRL8: 1 / 14720 (0.01%)
+	XLRs needed for SRL8+FF: 0 / 14720 (0.00%)
+	XLRs needed for Routing: 0 / 60800 (0.00%)
+
+9891 ff 17399 lut 173 ram
+ */
