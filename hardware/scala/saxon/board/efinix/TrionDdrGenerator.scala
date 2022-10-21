@@ -300,6 +300,11 @@ case class TrionDdrGenerator(addressWidth : Int, dataWidth : Int, mapping: Addre
 
       (List(io.ddrA_axi3.arw.valid) ++ io.ddrA_axi3.arw.payload.flatten).foreach(s => KeepAttribute(s.getDrivingReg()))
       (List(ddrAAxi3.r.valid) ++ ddrAAxi3.r.payload.flatten).foreach(s => KeepAttribute(s.getDrivingReg()))
+
+      when(RegNext(memoryClockDomain.isResetActive) init(False)){
+        io.ddrA_axi3.r.ready := True
+        io.ddrA_axi3.b.ready := True
+      }
     }
 
     val ddrAToAxi4 = withAxi4 generate new ClockingArea(ClockDomain(memoryClockDomain.clock, ddrAReset.reset, config = ClockDomainConfig(resetKind = ASYNC))) {
@@ -340,6 +345,11 @@ case class TrionDdrGenerator(addressWidth : Int, dataWidth : Int, mapping: Addre
       ddrAAxi4.w.haltWhen(!widStream.valid) >> io.ddrA_axi4.w
       ddrAAxi4.r <-< io.ddrA_axi4.r
       ddrAAxi4.b <-/< io.ddrA_axi4.b
+
+      when(RegNext(memoryClockDomain.isResetActive) init(False)){
+        io.ddrA_axi3.r.ready := True
+        io.ddrA_axi3.b.ready := True
+      }
     }
   }
 }
