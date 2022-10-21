@@ -114,7 +114,8 @@ class EfxVexRiscvCluster(p : EfxRiscvBmbDdrSocParameter,
       withDataCache = p.withL1D,
       withInstructionCache = p.withL1I,
       forceMisa = true,
-      forceMscratch = true
+      forceMscratch = true,
+      privilegedDebug = p.withRiscvDebugPriv
     ))
 
     val mul = cpu.config.get.get(classOf[MulPlugin])
@@ -187,14 +188,14 @@ class EfxVexRiscvCluster(p : EfxRiscvBmbDdrSocParameter,
 
   interconnect.getConnection(bridge.bmb, bmbPeripheral.bmb).ccByToggle
 
-  val hardJtag = !p.withSoftJtag generate new Area {
+  val hardJtag = (!p.withRiscvDebugPriv && !p.withSoftJtag) generate new Area {
     val debug = withDebugBus(debugCd.outputClockDomain, debugResetCd, 0x10B80000).withJtagInstruction(p.additionalJtagTapMax)
     val jtagCtrl = Handle(debug.logic.jtagBridge.io.ctrl.toIo).setName("jtagCtrl")
     val jtagCtrl_tck = Handle(in(Bool()) setName("jtagCtrl_tck"))
     debug.jtagClockDomain.loadAsync(ClockDomain(jtagCtrl_tck))
   }
 
-  val softJtag = p.withSoftJtag generate new Area {
+  val softJtag = (!p.withRiscvDebugPriv && p.withSoftJtag) generate new Area {
     val debug = withDebugBus(debugCd.outputClockDomain, debugResetCd, 0x10B80000).withJtagInstruction(p.additionalJtagTapMax)
     val jtag = new Generator {
       val io = produce(slave(Jtag())).setName("jtag")
@@ -211,6 +212,21 @@ class EfxVexRiscvCluster(p : EfxRiscvBmbDdrSocParameter,
           val wrapper = tap.map(debug.jtagInstruction, instructionId = 8)
         }
       }
+    }
+  }
+
+  val riscvJtag = (p.withRiscvDebugPriv) generate new Area {
+    val debug = withRiscvDebug(debugCd.outputClockDomain, debugResetCd)
+    val soft = p.withSoftJtag generate new Area{
+      val tap = debug.dmiDirect()
+      val io = Handle(tap.tap.io.jtag.toIo.setName("jtag"))
+    }
+    val hard = !p.withSoftJtag generate new Area{
+      val jtagCd = Handle[ClockDomain]
+      val noTap = debug.noTap(jtagCd)
+      val jtagCtrl = Handle(noTap.tunnel.io.instruction.toIo).setName("jtagCtrl")
+      val jtagCtrl_tck = Handle(in(Bool()) setName("jtagCtrl_tck"))
+      jtagCd.loadAsync(ClockDomain(jtagCtrl_tck))
     }
   }
 }
@@ -458,8 +474,13 @@ object EfxRiscvAxiDdrSocSystemSim {
         }
       }
 
-      val tcpJtagVex = if(dut.p.withVexRiscv) JtagTcp(
+      val tcpJtagVex = if(dut.p.withVexRiscv && !dut.p.withRiscvDebugPriv) JtagTcp(
         jtag = dut.system.vexCluster.softJtag.jtag.io,
+        jtagClkPeriod = jtagClkPeriod
+      )
+
+      val tcpJtagRiscvVex = if(dut.p.withVexRiscv && dut.p.withRiscvDebugPriv) JtagTcp(
+        jtag = dut.system.vexCluster.riscvJtag.soft.io,
         jtagClkPeriod = jtagClkPeriod
       )
 

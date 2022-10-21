@@ -67,6 +67,7 @@ case class EfxRiscvBmbDdrSocParameter(systemFrequency : HertzNumber,
                                       iCacheWays : Int,
                                       dCacheWays : Int,
                                       withSoftJtag : Boolean,
+                                      withRiscvDebugPriv : Boolean,
                                       gpio : Seq[GpioSpec],
                                       uart : Seq[UartSpec],
                                       spi : Seq[SpiSpec],
@@ -135,6 +136,7 @@ object EfxRiscvBmbDdrSocParameter{
     var cpuCount = 1
     var customInstruction = false
     var withSoftJtag = false
+    var withRiscvDebugPriv = false
     val gpio = ArrayBuffer[GpioSpec]()
     val uart = ArrayBuffer[UartSpec]()
     val spi = ArrayBuffer[SpiSpec]()
@@ -172,6 +174,7 @@ object EfxRiscvBmbDdrSocParameter{
       opt[Unit]("withFpu")action { (v, c) => withFpu = true } text(s"Turn on the FPU generation")
       opt[Int]("cpuCount")action { (v, c) => cpuCount = v } text(s"Default $cpuCount")
       opt[Unit]("softJtag")action { (v, c) => withSoftJtag = true } text(s"Add a jtag tap to the SoC. Default $withSoftJtag")
+      opt[Unit]("withRiscvDebugPriv")action { (v, c) => withRiscvDebugPriv = true } text(s"Implement the debug following the official RISC-V spec. Default $withRiscvDebugPriv")
       opt[String]("iCacheSize")action { (v, c) => iCacheSize = decode(v).toInt } text(s"At least 32 and multiple of 32. Default $iCacheSize")
       opt[String]("dCacheSize")action { (v, c) => dCacheSize = decode(v).toInt } text(s"At least 32 and multiple of 32. Default $dCacheSize")
       opt[String]("iCacheWays")action { (v, c) => iCacheWays = decode(v).toInt } text(s"At least 1 and power of 2. Default $iCacheWays")
@@ -357,6 +360,7 @@ object EfxRiscvBmbDdrSocParameter{
       spi = spi,
       timer = timer,
       withSoftJtag = withSoftJtag,
+      withRiscvDebugPriv = withRiscvDebugPriv,
       i2c = i2c,
       rmii = rmii,
       interrupt = interrupt,
@@ -436,7 +440,8 @@ object EfxRiscvBmbDdrSocParameter{
       axiAMapping      = (0xFA000000L,   16 MiB),
       withFpu = false,
       simulation = false,
-      withSoftJtag = false
+      withSoftJtag = false,
+      withRiscvDebugPriv = false
     )
     config
   }
